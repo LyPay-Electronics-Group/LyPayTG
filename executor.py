@@ -237,8 +237,8 @@ async def solve_task(filename: str):
                 message.attach(MIMEText(text_input, 'html'))
 
                 for i in range(3, len(subtask_data_array)):  # files
-                    attachment_path = subtask_data_array[i].replace('/', '\\')
-                    attachment_name = attachment_path[attachment_path.rfind('\\') + 1:]
+                    attachment_path = subtask_data_array[i].replace('\\', '/')
+                    attachment_name = attachment_path[attachment_path.rfind('/') + 1:]
                     file = MIMEBase('application', 'octet-stream')
                     with open(attachment_path, 'rb') as raw:
                         file.set_payload(raw.read())

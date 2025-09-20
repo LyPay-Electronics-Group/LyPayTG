@@ -1,5 +1,5 @@
 import sqlite3
-from os import getcwd as cwd, mkdir, listdir, rename, system, getenv
+from os import mkdir, listdir, rename, system, getenv
 from psutil import process_iter, AccessDenied as psutil_AccessDenied
 from os.path import exists
 from dotenv import load_dotenv
@@ -11,6 +11,7 @@ from colorama import Fore as F, Style as S, init as c_init, just_fix_windows_con
 from data import config as cfg
 from data.txt import EXE as txt_EXE
 from scripts import j2, firewall3, lpsql, exelink
+from scripts.cwd import cwd
 
 c_init(autoreset=True)
 just_fix_windows_console()
@@ -102,10 +103,10 @@ class Launcher:
             print(F.LIGHTGREEN_EX + f"{length} user{'s' if length > 1 else ''} found")
         except Exception as e:
             bad_exit = True
-            if "lypay_database.db" not in listdir(cwd() + "\\database"):
+            if "lypay_database.db" not in listdir(cwd() + "/database"):
                 if "lypay_database.db" in listdir(cwd()):
                     bad_exit = False
-                    rename(cwd() + "\\lypay_database.db", cwd() + "\\database\\lypay_database.db")
+                    rename(cwd() + "/lypay_database.db", cwd() + "/database/lypay_database.db")
                     self.db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
                     print(F.LIGHTYELLOW_EX + "CONFIGURED FROM ROOT")
                 else:
@@ -487,7 +488,7 @@ class Launcher:
             # todo: help page
             pass
         else:
-            path = args[0].replace('@local', cwd()).replace('@exe', cfg.PATHS.EXE).replace('/', '\\')
+            path = args[0].replace('@local', cwd()).replace('@exe', cfg.PATHS.EXE).replace('\\', '/')
             if exists(path):
                 w_open(path)
                 self.success_handle("open.open", f"Successfully opened {args[0]}")

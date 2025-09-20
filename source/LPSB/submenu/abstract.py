@@ -87,7 +87,7 @@ async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, 
     c = 0
     if exists(cfg.PATHS.STORES_KEYBOARDS + store_id):
         for file in listdir(cfg.PATHS.STORES_KEYBOARDS + store_id):
-            js = await j2.fromfile_async(cfg.PATHS.STORES_KEYBOARDS + store_id + '\\' + file)
+            js = await j2.fromfile_async(cfg.PATHS.STORES_KEYBOARDS + store_id + '/' + file)
             keyboard.add(InlineKeyboardButton(
                 text=f"{f.de_anchor(js["text"])}  |  {js["price"]} {cfg.VALUTA.SHORT}",
                 callback_data="none")

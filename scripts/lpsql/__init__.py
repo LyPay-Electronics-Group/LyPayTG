@@ -22,8 +22,8 @@ class DataBase:
         """
         self.tables = tables
 
-        self.path = path.strip().lower().replace('/', '\\')
-        if self.path[0] == '\\':
+        self.path = path.strip().lower().replace('\\', '/')
+        if self.path[0] == '/':
             self.path = self.path[1:]
         self.path = PATHS.DB + self.path
 

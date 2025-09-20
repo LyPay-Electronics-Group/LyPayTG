@@ -2,11 +2,11 @@ from bokeh.models import ColumnDataSource, DatetimeTickFormatter
 from bokeh.plotting import figure, curdoc
 from datetime import datetime
 from psutil import cpu_percent as CPU, virtual_memory as RAM, process_iter
+from os import listdir
+from scripts.cwd import cwd
 
-from os import getcwd, listdir
 
-
-EXE_path = getcwd() + '\\data\\executor'
+EXE_path = cwd() + '/data/executor'
 
 data_source = ColumnDataSource(data={
     'CPU_t': [],

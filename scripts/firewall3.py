@@ -32,12 +32,12 @@ class FireWall:
         else:
             raise ValueError
 
-        if not exists(PATH + 'W\\'):
-            mkdir(PATH + 'W\\')
-        if not exists(PATH + 'B\\'):
-            mkdir(PATH + 'B\\')
-        self.W = PATH + 'W\\'
-        self.B = PATH + 'B\\'
+        if not exists(PATH + 'W/'):
+            mkdir(PATH + 'W/')
+        if not exists(PATH + 'B/'):
+            mkdir(PATH + 'B/')
+        self.W = PATH + 'W/'
+        self.B = PATH + 'B/'
 
         if exists(self.W + self.opened):
             self.freeW = True

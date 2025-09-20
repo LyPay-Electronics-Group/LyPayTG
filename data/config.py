@@ -1,4 +1,4 @@
-﻿from os import getcwd
+﻿from scripts.cwd import cwd
 
 
 class VALUTA:
@@ -86,28 +86,28 @@ class NAMES:
 
 
 class PATHS:
-    DB = getcwd() + '\\database\\'
-    DATA = getcwd() + '\\data\\'
+    DB = cwd() + '/database/'
+    DATA = cwd() + '/data/'
 
-    QR = DB + 'QR\\'
-    FIREWALL = DB + 'firewall\\'
+    QR = DB + 'QR/'
+    FIREWALL = DB + 'firewall/'
 
-    EXE = DATA + 'executor\\'
-    IMAGES = DATA + 'images\\'
-    LISTS = DATA + 'lists\\'
-    ccc_lists = LISTS + 'ccc\\'
-    EMAIL = DATA + 'email\\'
+    EXE = DATA + 'executor/'
+    IMAGES = DATA + 'images/'
+    LISTS = DATA + 'lists/'
+    ccc_lists = LISTS + 'ccc/'
+    EMAIL = DATA + 'email/'
 
     DB_BASE = DB + 'base.json'
 
-    FIREWALL_MAIN = FIREWALL + 'MAIN\\'
-    FIREWALL_LPAA = FIREWALL + 'LPAA\\'
-    FIREWALL_LPSB = FIREWALL + 'LPSB\\'
+    FIREWALL_MAIN = FIREWALL + 'MAIN/'
+    FIREWALL_LPAA = FIREWALL + 'LPAA/'
+    FIREWALL_LPSB = FIREWALL + 'LPSB/'
 
-    STORES_KEYBOARDS = DATA + 'stores keyboards\\'
-    STORES_LOGOS = DATA + 'stores logos\\'
-    OLD_LOGOS = DATA + 'changed stores logos\\'
-    STORES_CHEQUES = DATA + 'cheques\\'
+    STORES_KEYBOARDS = DATA + 'stores keyboards/'
+    STORES_LOGOS = DATA + 'stores logos/'
+    OLD_LOGOS = DATA + 'changed stores logos/'
+    STORES_CHEQUES = DATA + 'cheques/'
 
     LAUNCH_SETTINGS = DATA + 'settings.json'
 
@@ -154,9 +154,9 @@ WARNING_GROUP = -4610376447
 HIGH_GROUP = -4573592664
 AD_GROUP = -4716284444
 
-VERSION = "v2.2.1"
+VERSION = "v2.3"
 NAME = ""
-BUILD = 80
+BUILD = 81
 
 CONTACT_TAG = "@IGriB28I"
 

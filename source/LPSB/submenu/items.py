@@ -57,7 +57,7 @@ async def display_current_items(callback: CallbackQuery, state: FSMContext):
                 listdir_ = listdir(path_)
                 if len(listdir_) > 0:
                     for k in listdir_:
-                        js = await j2.fromfile_async(path_ + '\\' + k)
+                        js = await j2.fromfile_async(path_ + '/' + k)
                         await callback.message.answer(f'<code>{f.de_anchor(js["text"])} / {js["price"]}</code>')
                 else:
                     await callback.message.answer(txt.LPSB.ITEMS.NOT_EXIST)
@@ -156,7 +156,7 @@ async def stop_filling(message: Message, state: FSMContext):
                 pass
 
             for k in range(len(data[1])):
-                with open(path + f'\\{i.to_id(k + 1 + data[0])}.json', 'w', encoding='utf8') as file:
+                with open(path + f'/{i.to_id(k + 1 + data[0])}.json', 'w', encoding='utf8') as file:
                     file.write(j2.to_({
                         "text": data[1][k][0],
                         "price": int(data[1][k][1]),
@@ -407,7 +407,7 @@ async def edit_item(message: Message, callback: CallbackQuery, state: FSMContext
                     pass
                 return
             await state.update_data(ITEMS_EDIT=n)
-            js = await j2.fromfile_async(path_ + f'\\{i.to_id(n)}.json')
+            js = await j2.fromfile_async(path_ + f'/{i.to_id(n)}.json')
             new_string = f'<code>{f.de_anchor(js["text"])} / {js["price"]}</code>'
             if new_string != message.text:
                 await message.edit_text(new_string, reply_markup=main_keyboard.menuCMD["items_edit"])
@@ -510,7 +510,7 @@ async def edit_item_data(message: Message, state: FSMContext):
                     path_ = cfg.PATHS.STORES_KEYBOARDS + id_
 
                     if exists(path_):
-                        with open(path_ + f'\\{i.to_id(n)}.json', 'w', encoding='utf8') as file:
+                        with open(path_ + f'/{i.to_id(n)}.json', 'w', encoding='utf8') as file:
                             file.write(j2.to_({
                                 "text": f.anchor(parse[0]),
                                 "price": int(parse[1]),
@@ -620,15 +620,15 @@ async def delete_item_data(callback: CallbackQuery, state: FSMContext):
             path_ = cfg.PATHS.STORES_KEYBOARDS + id_
             data = (await state.get_data())["ITEMS_EDIT"]
             for k in range(data, i.to_int(listdir(path_)[-1][:-5])):
-                js_base = j2.fromfile(path_ + f"\\{i.to_id(k)}.json")
-                js_copying = j2.fromfile(path_ + f"\\{i.to_id(k + 1)}.json")
+                js_base = j2.fromfile(path_ + f"/{i.to_id(k)}.json")
+                js_copying = j2.fromfile(path_ + f"/{i.to_id(k + 1)}.json")
                 js_base["text"] = js_copying["text"]
                 js_base["price"] = js_copying["price"]
 
-                with open(path_ + f"\\{i.to_id(k)}.json", 'w', encoding='utf8') as file:
+                with open(path_ + f"/{i.to_id(k)}.json", 'w', encoding='utf8') as file:
                     file.write(j2.to_(js_base))
 
-            remove(path_ + '\\' + listdir(path_)[-1])
+            remove(path_ + '/' + listdir(path_)[-1])
             await callback.message.edit_text("Товар удалён!")
             await callback.answer()
             edit_item_message = await callback.message.answer('%')
