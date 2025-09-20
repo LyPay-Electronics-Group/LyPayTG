@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from winsound import PlaySound, SND_ASYNC
 from colorama import Fore, Style, init as c_init
 from pyfiglet import figlet_format as media_text
 from traceback import format_exc
@@ -40,7 +39,6 @@ def startup(bot: str, *updates: str) -> None:
     for u in updates:
         print(u)
     print()
-    PlaySound('SystemAsterisk', SND_ASYNC)
 
 
 def log(*, command: tuple[str, str], status: tuple[str, str] = None, from_user: tuple[int, str | None]) -> None:
