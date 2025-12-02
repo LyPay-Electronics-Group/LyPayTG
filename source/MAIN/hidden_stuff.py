@@ -14,7 +14,7 @@ print("MAIN/hidden_staff router")
 
 @rtr.message(Command("r34"))
 async def r34(message: Message):
-    await message.answer("Нет.")
+    await message.answer_sticker(cfg.MEDIA.ZANI_AND_PHOEBE)
     tracker.log(
         command=(F.LIGHTWHITE_EX, "R34"),
         from_user=f.collect_FU(message)
