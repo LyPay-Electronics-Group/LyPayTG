@@ -1,17 +1,22 @@
 import sqlite3
-from os import mkdir, listdir, rename, system, getenv
+
+from os import mkdir, listdir, rename, system, getenv, getcwd as cwd
 from psutil import process_iter, AccessDenied as psutil_AccessDenied
 from os.path import exists
+from platform import system as get_platform_name
+
 from dotenv import load_dotenv
 from webbrowser import open as w_open
+
 from time import time as unix
 from datetime import datetime
+
 from colorama import Fore as F, Style as S, init as c_init, just_fix_windows_console
 
 from data import config as cfg
 from data.txt import EXE as txt_EXE
 from scripts import j2, firewall3, lpsql, exelink
-from scripts.cwd import cwd
+from scripts.i import to_id as i_to_id
 
 c_init(autoreset=True)
 just_fix_windows_console()
@@ -83,6 +88,7 @@ class Launcher:
                 userID=-1
             )
         self.last_error, self.last_success = None, None
+        self.platform = get_platform_name()
 
         print(F.LIGHTBLACK_EX + S.BRIGHT + "Filling config.PATHS...", end=' ')
         created_dirs = 0
@@ -182,7 +188,7 @@ class Launcher:
             "lpsb": firewall3.FireWall('LPSB', silent=True)
         }
         self.update_settings("launch", True)
-        self.update_settings("launch_stamp", f"lypay_launch_stamp_{unix()}")
+        self.update_settings("launch_stamp", f"lls_{i_to_id(int(unix() * 1e6), 10)}")
 
     def close(self):
         self.update_settings("last_launch", int(unix()))
@@ -518,7 +524,12 @@ class Launcher:
                                   f"There is no argument '{args[0]}' associated with 'open'!")
                 return False
 
-            system(f"startup.bat {setup} > NUL")
+            system(
+                f"./{
+                "startup.bat" if self.platform == "Windows" else
+                ("startup.sh" if self.platform == "Linux" else "")
+                } {setup} > NUL"
+            )
             if not silent:
                 self.success_handle("start.instance", f"Successfully started: {args[0]}")
             return True
@@ -531,7 +542,10 @@ class Launcher:
 
             elif args[0] == 'main' or args[0] == 'bot':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['main.py', self.settings_array['launch_stamp']]:
+                    if process.name() == (
+                            "python.exe" if self.platform == 'Windows' else
+                            ('python3' if self.platform == 'Linux' else "")
+                        ) and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['main.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -539,7 +553,10 @@ class Launcher:
 
             elif args[0] == 'executor' or args[0] == 'exe':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['executor.py', self.settings_array['launch_stamp']]:
+                    if process.name() == (
+                            "python.exe" if self.platform == 'Windows' else
+                            ('python3' if self.platform == 'Linux' else "")
+                        ) and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['executor.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -547,7 +564,10 @@ class Launcher:
 
             elif args[0] == 'stores' or args[0] == 'store' or args[0] == 'lpsb':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['stores.py', self.settings_array['launch_stamp']]:
+                    if process.name() == (
+                            "python.exe" if self.platform == 'Windows' else
+                            ('python3' if self.platform == 'Linux' else "")
+                        ) and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['stores.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -555,7 +575,10 @@ class Launcher:
 
             elif args[0] == 'admins' or args[0] == 'admin' or args[0] == 'lpaa':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['admins.py', self.settings_array['launch_stamp']]:
+                    if process.name() == (
+                            "python.exe" if self.platform == 'Windows' else
+                            ('python3' if self.platform == 'Linux' else "")
+                        ) and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['admins.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -563,7 +586,10 @@ class Launcher:
 
             elif args[0] == 'every' or args[0] == 'everything' or args[0] == 'all':
                 for process in process_iter():
-                    if process.name() == "python.exe" and len(process.cmdline()) > 0 and process.cmdline()[-1] == self.settings_array['launch_stamp']:
+                    if process.name() == (
+                            "python.exe" if self.platform == 'Windows' else
+                            ('python3' if self.platform == 'Linux' else "")
+                        ) and len(process.cmdline()) > 0 and process.cmdline()[-1] == self.settings_array['launch_stamp']:
                         process.kill()
                 if not silent:
                     self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -801,7 +827,12 @@ class Launcher:
             self.error_handle("extra.argument", "ArgumentError", f"You have to assiciate more than 1 argument! Look here for more info: " + F.YELLOW + "help")
 
     def heartbeat(self):
-        system(r"startup.bat -beat source\SRV\plots.py")
+        system(
+            f"./{
+            "startup.bat" if self.platform == "Windows" else
+            ("startup.sh" if self.platform == "Linux" else "")
+            } -beat source/SRV/plots.py"
+        )
         self.success_handle("heartbeat.launch", "Successfully started measuring")
 
     def config(self, *args):

@@ -1,10 +1,8 @@
 from aiogram import Router, F as mF
 from aiogram.types import Message, FSInputFile
 
-from os import remove
+from os import remove, getcwd as cwd
 from shutil import make_archive
-
-from scripts.cwd import cwd
 
 
 rtr = Router()

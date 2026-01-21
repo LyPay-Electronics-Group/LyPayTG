@@ -1,12 +1,15 @@
 from bokeh.models import ColumnDataSource, DatetimeTickFormatter
 from bokeh.plotting import figure, curdoc
+
 from datetime import datetime
+
 from psutil import cpu_percent as CPU, virtual_memory as RAM, process_iter
-from os import listdir
-from scripts.cwd import cwd
+from os import listdir, getcwd as cwd
+from platform import system as get_platform_name
 
 
 EXE_path = cwd() + '/data/executor'
+platform = get_platform_name()
 
 data_source = ColumnDataSource(data={
     'CPU_t': [],
@@ -105,7 +108,10 @@ def stream():
     c_total = CPU()
     python_processes = list()
     for running_process in process_iter():
-        if running_process.name() == "python.exe":
+        if running_process.name() == (
+            "python.exe" if platform == 'Windows' else
+            ('python3' if platform == 'Linux' else "")
+        ):
             python_processes.append(running_process)
     if len(python_processes) == 0:
         print("[LPAA] machine call fail\nПроцесс python.exe не найден!")

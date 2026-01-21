@@ -8,6 +8,7 @@ from asyncio import sleep
 from colorama import Fore as F, Style as S
 from os import listdir
 from psutil import cpu_percent as CPU, virtual_memory as RAM, process_iter
+from platform import system as get_platform_name
 from datetime import datetime
 
 from scripts import j2, f, firewall3, tracker, exelink, lpsql
@@ -21,6 +22,8 @@ rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 firewall3 = firewall3.FireWall("LPAA")
 db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
+platform_name = get_platform_name()
+lls = j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["launch_stamp"]
 print("LPAA/info router")
 
 
@@ -1026,7 +1029,10 @@ async def machine_info(message: Message):
         if firewall_status == firewall3.WHITE_ANCHOR:
             python_processes = list()
             for running_process in process_iter():
-                if running_process.name() == "python.exe" and len(running_process.cmdline()) > 0 and running_process.cmdline()[-1] == f'lypay_{cfg.VERSION}_launch_stamp':
+                if running_process.name() == (
+                        "python.exe" if platform_name == 'Windows' else
+                        ('python3' if platform_name == 'Linux' else "")
+                    ) and len(running_process.cmdline()) > 0 and running_process.cmdline()[-1] == lls:
                     python_processes.append(running_process)
             if len(python_processes) == 0:
                 exelink.warn(

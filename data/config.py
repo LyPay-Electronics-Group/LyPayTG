@@ -1,4 +1,4 @@
-﻿from scripts.cwd import cwd
+﻿from os import getcwd as cwd
 
 
 class VALUTA:
