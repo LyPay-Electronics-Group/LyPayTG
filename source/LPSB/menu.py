@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, tracker, firewall3, lpsql, exelink
+from scripts import tracker, firewall3, lpsql, memory, parser
 from scripts.j2 import fromfile as j_fromfile
 from data import config as cfg, txt
 
@@ -32,7 +32,7 @@ print("LPSB/menu router")
 @rtr.message(Command("menu"))
 async def menu(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             current = await state.get_state()
@@ -44,7 +44,7 @@ async def menu(message: Message, state: FSMContext):
                 await state.set_state(MenuFSM.MENU)
                 tracker.log(
                     command=("MENU", F.BLUE + S.BRIGHT),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
                 storeID = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
                 m_id = (await message.answer(
@@ -54,33 +54,29 @@ async def menu(message: Message, state: FSMContext):
                     ),
                     reply_markup=main_keyboard.menuCMD["main"]
                 )).message_id
-                exelink.sublist(
+                await memory.rewrite_sublist(
                     mode='add',
                     name='ccc/lpsb',
                     key=message.chat.id,
-                    data=m_id,
-                    userID=message.from_user.id
+                    data=m_id
                 )
             elif current == MenuFSM.MENU:
                 await message.delete()
             elif current in MenuFSM.__states__:
                 c = 0
-                for key, value in (await f.read_sublist('ccc/lpsb')).items():
+                for key, value in (await memory.read_sublist('ccc/lpsb')).items():
                     if key == str(message.chat.id):
                         c += 1
-                        exelink.ccc_remove_keyboard(
-                            bot='lpsb',
-                            chat_id=key,
-                            message_id=value,
+                        await message.bot.edit_message_text(
                             text="[CCC] Действие отменено.",
-                            userID=message.from_user.id
+                            message_id=value,
+                            chat_id=key
                         )
-                        exelink.sublist(
+                        await memory.rewrite_sublist(
                             mode='remove',
                             name='ccc/lpsb',
                             key=key,
-                            data=value,
-                            userID=message.from_user.id
+                            data=value
                         )
                 if c == 0:
                     await message.answer(txt.LPSB.CMD.CANCELLED)
@@ -98,7 +94,7 @@ async def menu(message: Message, state: FSMContext):
 
                 tracker.log(
                     command=("MENU_CANCELLED", F.BLUE + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
                 await menu(message, state)
             elif current not in RegistrationFSM.__states__:
@@ -108,13 +104,13 @@ async def menu(message: Message, state: FSMContext):
                 tracker.log(
                     command=("MENU", F.BLUE + S.BRIGHT),
                     status=("FORCED_REGISTRATION", F.LIGHTMAGENTA_EX + S.BRIGHT),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.NOT_IN_WHITELIST)
             await message.answer_sticker(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS[
                                              randint(0, len(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS)-1)

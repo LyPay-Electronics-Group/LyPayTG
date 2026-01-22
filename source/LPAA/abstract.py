@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from asyncio import sleep
 from colorama import Fore as F, Style as S
 
-from scripts import f, firewall3, tracker, exelink
+from scripts import firewall3, tracker, memory, parser
 from scripts.j2 import fromfile as j_fromfile
 from data import txt, config as cfg
 
@@ -23,21 +23,21 @@ print("LPAA/abstract router")
 @rtr.message(Command("start"))
 async def start(message: Message):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             await message.answer(txt.LPAA.START)
             await message.answer(txt.LPAA.INFO_TABLET)
             tracker.log(
                 command=("START", F.GREEN + S.BRIGHT),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
         else:
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await sleep(2)
             await message.answer_animation(cfg.MEDIA.NOT_IN_LPAA_WHITELIST)
             print(F.LIGHTBLACK_EX + S.DIM + str(message.from_user.id))
@@ -51,7 +51,7 @@ async def start(message: Message):
 @rtr.message(Command("cancel"))
 async def cancel(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             if await state.get_state() in InfoFSM.__states__:
@@ -62,22 +62,19 @@ async def cancel(message: Message, state: FSMContext):
                     except:
                         pass
             c = 0
-            for key, value in (await f.read_sublist('ccc/lpaa')).items():
+            for key, value in (await memory.read_sublist('ccc/lpaa')).items():
                 if key == str(message.chat.id):
                     c += 1
-                    exelink.ccc_remove_keyboard(
-                        bot='lpaa',
-                        chat_id=key,
-                        message_id=value,
+                    await message.bot.edit_message_text(
                         text="[CCC] Действие отменено.",
-                        userID=message.from_user.id
+                        chat_id=key,
+                        message_id=value
                     )
-                    exelink.sublist(
+                    await memory.rewrite_sublist(
                         mode='remove',
                         name='ccc/lpaa',
                         key=key,
-                        data=value,
-                        userID=message.from_user.id
+                        data=value
                     )
 
             await state.clear()
@@ -85,14 +82,14 @@ async def cancel(message: Message, state: FSMContext):
                 await message.answer(txt.LPAA.CANCELLED)
             tracker.log(
                 command=("CANCELLED", F.RED + S.BRIGHT),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
         else:
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await sleep(2)
             await message.answer_animation(cfg.MEDIA.NOT_IN_LPAA_WHITELIST)
     except Exception as e:
@@ -105,11 +102,11 @@ async def cancel(message: Message, state: FSMContext):
 @rtr.message(Command("q"), mF.chat.id.not_in((cfg.HIGH_GROUP, cfg.WARNING_GROUP)))
 async def q(message: Message):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await message.answer("Q!")
         tracker.log(
             command=("Q!", F.GREEN + S.BRIGHT),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
         print(F.LIGHTBLACK_EX + S.DIM + str(message.from_user.id))
     except Exception as e:
@@ -122,21 +119,21 @@ async def q(message: Message):
 @rtr.message(Command("help", "h"), mF.chat.id.not_in((cfg.HIGH_GROUP, cfg.WARNING_GROUP)))
 async def agent_help(message: Message):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             tracker.log(
                 command=("HELP", F.MAGENTA + S.BRIGHT),
                 status=("AGENT", F.LIGHTBLACK_EX),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             await message.answer(txt.LPAA.AGENT_HELP)
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
         else:
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await sleep(2)
             await message.answer_animation(cfg.MEDIA.NOT_IN_LPAA_WHITELIST)
             print(F.LIGHTBLACK_EX + S.DIM + str(message.from_user.id))
@@ -150,12 +147,12 @@ async def agent_help(message: Message):
 @rtr.message(Command("help", "h"), mF.chat.id == cfg.HIGH_GROUP)
 async def admin_help(message: Message):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await message.answer(txt.LPAA.ADMIN_HELP)
         tracker.log(
             command=("HELP", F.MAGENTA + S.BRIGHT),
             status=("ADMIN", F.LIGHTBLACK_EX),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(

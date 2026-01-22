@@ -2,7 +2,9 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton, ReplyKeyboardBuilder, KeyboardButton
 from scripts import lpsql
 from data.config import VALUTA
+
 keyboard_db_shortcut = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
+
 
 startCMDbuilder = InlineKeyboardBuilder([[
     InlineKeyboardButton(text="Официальный канал Ярмарки", url="https://t.me/fairL2SH")

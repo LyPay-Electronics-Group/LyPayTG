@@ -1,7 +1,7 @@
 {
-    "launch": true, 
+    "launch": false, 
     "auto_restart_cmd": null, 
-    "config_v": 41, 
+    "config_v": 42, 
     "update_names": false, 
     "launch_timeout": 0.2, 
     "auction": false, 
@@ -11,6 +11,6 @@
     "lpsb_can_register": true, 
     "lpsb_can_send_ad": false, 
     "show_unknown_errors": true, 
-    "last_launch": 1769017973, 
-    "launch_stamp": "lls_hf2bn7csar"
+    "last_launch": 1769040906, 
+    "launch_stamp": null
 }

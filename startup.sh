@@ -10,6 +10,11 @@ check_before_start() {
         read -r
         exit 1
     fi
+    echo "checking for venv..."
+    if [[ ! -f ".venv" ]]; then
+        python3 -m venv ./.venv
+    fi
+    echo "done"
     echo "checking for dependencies..."
     sleep 1
     python3 -m pip install -r .req
@@ -64,6 +69,7 @@ launch() {
 
 
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
+source ./.venv/bin/activate
 
 if [[ $# -eq 0 ]]; then
     check_before_start

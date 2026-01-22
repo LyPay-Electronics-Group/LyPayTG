@@ -11,7 +11,7 @@ from psutil import cpu_percent as CPU, virtual_memory as RAM, process_iter
 from platform import system as get_platform_name
 from datetime import datetime
 
-from scripts import j2, f, firewall3, tracker, exelink, lpsql
+from scripts import j2, firewall3, tracker, lpsql, memory, parser, messenger
 from data import config as cfg, txt
 
 from source.LPAA._states import *
@@ -30,7 +30,7 @@ print("LPAA/info router")
 @rtr.message(Command("info"), mF.chat.id == cfg.HIGH_GROUP)
 async def information(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             msg = list()
@@ -45,13 +45,13 @@ async def information(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("MENU", F.YELLOW + S.NORMAL),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
             await sleep(2)
             await message.answer_animation(cfg.MEDIA.NOT_IN_LPAA_WHITELIST)
@@ -66,7 +66,7 @@ async def information(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'user_ID_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_user_id(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск пользователя по ID")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -77,7 +77,7 @@ async def info_user_id(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("USER_ID", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -89,7 +89,7 @@ async def info_user_id(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.USER_ID, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def user_by_id(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = int(message.text.strip())
             await message.answer("Запрос одобрен. Ожидайте ответа...")
@@ -110,7 +110,7 @@ async def user_by_id(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -118,7 +118,7 @@ async def user_by_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -131,7 +131,7 @@ async def user_by_id(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'user_NAME_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_user_name(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск пользователя по имени")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -142,7 +142,7 @@ async def info_user_name(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("USER_NAME", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -154,14 +154,14 @@ async def info_user_name(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.USER_NAME, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def user_by_name(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower()
             await message.answer("Запрос одобрен. Ожидайте ответа...")
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             out = 0
             for user in db.searchall("users", "ID"):
@@ -182,7 +182,7 @@ async def user_by_name(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -190,7 +190,7 @@ async def user_by_name(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -203,7 +203,7 @@ async def user_by_name(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'user_EMAIL_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_user_email(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск пользователя по почте")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -214,7 +214,7 @@ async def info_user_email(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("USER_EMAIL", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -226,14 +226,14 @@ async def info_user_email(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.USER_EMAIL, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def user_by_email(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower()
             await message.answer("Запрос одобрен. Ожидайте ответа...")
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             out = 0
             for user in db.searchall("users", "ID"):
@@ -254,7 +254,7 @@ async def user_by_email(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -262,7 +262,7 @@ async def user_by_email(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -275,7 +275,7 @@ async def user_by_email(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'user_TAG_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_user_tag(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск пользователя по тегу")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -286,7 +286,7 @@ async def info_user_tag(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("USER_TAG", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -298,14 +298,14 @@ async def info_user_tag(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.USER_TAG, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def user_by_tag(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower().replace('@', '')
             await message.answer("Запрос одобрен. Ожидайте ответа...")
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             out = 0
             for user in db.searchall("users", "ID"):
@@ -326,7 +326,7 @@ async def user_by_tag(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -334,7 +334,7 @@ async def user_by_tag(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -347,7 +347,7 @@ async def user_by_tag(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data.in_(('user_TRANSACTION_', 'store_TRANSACTION_')), mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_transaction(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран просмотр переводов")
         await callback.answer()
         await state.set_state(InfoFSM.TRANSACTION)
@@ -364,7 +364,7 @@ async def info_transaction(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("USER_TRANSACTIONS", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -380,7 +380,7 @@ def format_transaction_report(text: str, id_: str, amount: int, time: str) -> st
 @rtr.message(InfoFSM.TRANSACTION, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def transactions(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         data = (await state.get_data())["TRANSACTION"]
         is_user = data == 'u'
         input_ = message.text.strip()
@@ -398,7 +398,7 @@ async def transactions(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
 
         else:
@@ -408,7 +408,7 @@ async def transactions(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("SEARCHING", F.GREEN + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
                 c = 0
                 for tr in db.get_table("history"):
@@ -480,14 +480,14 @@ async def transactions(message: Message, state: FSMContext):
                     tracker.log(
                         command=("INFO", F.YELLOW + S.NORMAL),
                         status=("NULL_SEARCH", F.RED + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             except lpsql.errors.IDNotFound:
                 await message.answer("Ничего не найдено!")
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
     except Exception as e:
@@ -501,7 +501,7 @@ async def transactions(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'store_ID_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_store_id(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск магазина по ID")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -512,7 +512,7 @@ async def info_store_id(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("STORE_ID", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -524,7 +524,7 @@ async def info_store_id(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.STORE_ID, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def store_by_id(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower()
             await message.answer("Запрос одобрен. Ожидайте ответа...")
@@ -532,7 +532,7 @@ async def store_by_id(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("SEARCHING", F.GREEN + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
                 read = db.search("stores", "ID", input_)
                 if read is None:
@@ -550,7 +550,7 @@ async def store_by_id(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -558,7 +558,7 @@ async def store_by_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -571,7 +571,7 @@ async def store_by_id(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'store_NAME_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_store_name(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск магазина по названию")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -582,7 +582,7 @@ async def info_store_name(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("STORE_ID", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -594,7 +594,7 @@ async def info_store_name(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.STORE_NAME, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def store_by_name(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower()
             await message.answer("Запрос одобрен. Ожидайте ответа...")
@@ -602,7 +602,7 @@ async def store_by_name(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             for store in db.searchall("stores", "ID"):
                 js = db.search("stores", "ID", store)
@@ -622,7 +622,7 @@ async def store_by_name(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -630,7 +630,7 @@ async def store_by_name(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -643,7 +643,7 @@ async def store_by_name(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'store_DESC_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_store_desc(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск магазина по описанию")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -654,7 +654,7 @@ async def info_store_desc(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("STORE_DESC", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -666,7 +666,7 @@ async def info_store_desc(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.STORE_DESC, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def store_by_desc(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower()
             await message.answer("Запрос одобрен. Ожидайте ответа...")
@@ -674,7 +674,7 @@ async def store_by_desc(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             for store in db.searchall("stores", "ID"):
                 js = db.search("stores", "ID", store)
@@ -694,7 +694,7 @@ async def store_by_desc(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -702,7 +702,7 @@ async def store_by_desc(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -715,7 +715,7 @@ async def store_by_desc(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'store_HOST_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_store_host(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск магазина по владельцу")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -726,7 +726,7 @@ async def info_store_host(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("STORE_HOST", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -738,7 +738,7 @@ async def info_store_host(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.STORE_HOST, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def store_by_host(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = int(message.text.strip().lower())
             await message.answer("Запрос одобрен. Ожидайте ответа...")
@@ -746,7 +746,7 @@ async def store_by_host(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             for store in db.searchall("stores", "ID"):
                 js = db.search("stores", "ID", store)
@@ -766,7 +766,7 @@ async def store_by_host(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -774,7 +774,7 @@ async def store_by_host(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -787,7 +787,7 @@ async def store_by_host(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'cheque_ID_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_cheque_id(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск чека по ID")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -798,7 +798,7 @@ async def info_cheque_id(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("CHEQUE_ID", F.YELLOW + S.NORMAL),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -810,7 +810,7 @@ async def info_cheque_id(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.CHEQUE_ID, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def cheque_by_id(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower().replace('#', '').replace('cheque', '')
             if input_[0] == '_':
@@ -819,7 +819,7 @@ async def cheque_by_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             for cheque in listdir(cfg.PATHS.STORES_CHEQUES):
                 if input_ == cheque[:-5]:
@@ -834,7 +834,7 @@ async def cheque_by_id(message: Message, state: FSMContext):
                         group=user["class"],
                         tag='@'+user["tag"] if user["tag"] else '–',
                         items=txt.MAIN.STORE.CHEQUE_GENERATED_STRINGS_SEPARATOR.join(
-                            [f"{f.de_anchor(items_[i]["text"])} × {multipliers_[i]} | {items_[i]["price"] * multipliers_[i]} {cfg.VALUTA.SHORT}" for i in range(len(items_))]
+                            [f"{parser.de_anchor(items_[i]["text"])} × {multipliers_[i]} | {items_[i]["price"] * multipliers_[i]} {cfg.VALUTA.SHORT}" for i in range(len(items_))]
                         ),
                         total=js["price"],
                         status="активен" if js["status"] else "возвращён"
@@ -845,7 +845,7 @@ async def cheque_by_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("NULL_SEARCH", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             await state.clear()
         except ValueError:
@@ -853,7 +853,7 @@ async def cheque_by_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -866,7 +866,7 @@ async def cheque_by_id(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'cheque_STORE_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_cheque_store(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск чека по магазину")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -877,7 +877,7 @@ async def info_cheque_store(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("CHEQUE_STORE", F.YELLOW + S.NORMAL),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -889,7 +889,7 @@ async def info_cheque_store(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.CHEQUE_STORE, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def cheque_by_store(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip().lower()
             await message.answer("Запрос одобрен. Ожидайте ответа...")
@@ -897,7 +897,7 @@ async def cheque_by_store(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             for cheque in listdir(cfg.PATHS.STORES_CHEQUES):
                 if input_ == cheque.split('_')[1]:
@@ -912,7 +912,7 @@ async def cheque_by_store(message: Message, state: FSMContext):
                         group=user["class"],
                         tag='@'+user["tag"] if user["tag"] else '–',
                         items=txt.MAIN.STORE.CHEQUE_GENERATED_STRINGS_SEPARATOR.join(
-                            [f"{f.de_anchor(items_[i]["text"])} × {multipliers_[i]} | {items_[i]["price"] * multipliers_[i]} {cfg.VALUTA.SHORT}" for i in range(len(items_))]
+                            [f"{parser.de_anchor(items_[i]["text"])} × {multipliers_[i]} | {items_[i]["price"] * multipliers_[i]} {cfg.VALUTA.SHORT}" for i in range(len(items_))]
                         ),
                         total=js["price"],
                         status="активен" if js["status"] else "возвращён"
@@ -924,7 +924,7 @@ async def cheque_by_store(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -932,7 +932,7 @@ async def cheque_by_store(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -945,7 +945,7 @@ async def cheque_by_store(message: Message, state: FSMContext):
 @rtr.callback_query(InfoFSM.INFO, mF.data == 'cheque_CUSTOMER_', mF.message.chat.id == cfg.HIGH_GROUP)
 async def info_cheque_customer(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Выбран поиск чека по покупателю")
         await callback.answer()
         msg = (await state.get_data())["MSG"]
@@ -956,7 +956,7 @@ async def info_cheque_customer(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("INFO", F.YELLOW + S.NORMAL),
             status=("CHEQUE_CUSTOMER", F.YELLOW + S.NORMAL),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -968,7 +968,7 @@ async def info_cheque_customer(callback: CallbackQuery, state: FSMContext):
 @rtr.message(InfoFSM.CHEQUE_CUST, mF.text, mF.chat.id == cfg.HIGH_GROUP)
 async def cheque_by_customer(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         try:
             input_ = message.text.strip()
             await message.answer("Запрос одобрен. Ожидайте ответа...")
@@ -976,7 +976,7 @@ async def cheque_by_customer(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("SEARCHING", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             for cheque in listdir(cfg.PATHS.STORES_CHEQUES):
                 if input_ == cheque.split('_')[0]:
@@ -991,7 +991,7 @@ async def cheque_by_customer(message: Message, state: FSMContext):
                         group=user["class"],
                         tag='@'+user["tag"] if user["tag"] else '–',
                         items=txt.MAIN.STORE.CHEQUE_GENERATED_STRINGS_SEPARATOR.join(
-                            [f"{f.de_anchor(items_[i]["text"])} × {multipliers_[i]} | {items_[i]["price"] * multipliers_[i]} {cfg.VALUTA.SHORT}" for i in range(len(items_))]
+                            [f"{parser.de_anchor(items_[i]["text"])} × {multipliers_[i]} | {items_[i]["price"] * multipliers_[i]} {cfg.VALUTA.SHORT}" for i in range(len(items_))]
                         ),
                         total=js["price"],
                         status="активен" if js["status"] else "возвращён"
@@ -1003,7 +1003,7 @@ async def cheque_by_customer(message: Message, state: FSMContext):
                 tracker.log(
                     command=("INFO", F.YELLOW + S.NORMAL),
                     status=("NULL_SEARCH", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             await state.clear()
         except ValueError:
@@ -1011,7 +1011,7 @@ async def cheque_by_customer(message: Message, state: FSMContext):
             tracker.log(
                 command=("INFO", F.YELLOW + S.NORMAL),
                 status=("BAD_ARG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -1024,7 +1024,7 @@ async def cheque_by_customer(message: Message, state: FSMContext):
 @rtr.message(Command("machine"), mF.chat.id == cfg.HIGH_GROUP)
 async def machine_info(message: Message):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             python_processes = list()
@@ -1035,10 +1035,7 @@ async def machine_info(message: Message):
                     ) and len(running_process.cmdline()) > 0 and running_process.cmdline()[-1] == lls:
                     python_processes.append(running_process)
             if len(python_processes) == 0:
-                exelink.warn(
-                    text=txt.EXE.ALERTS.NO_PROCESS_PYTHON,
-                    userID=message.from_user.id
-                )
+                await messenger.warn(text=txt.EXE.ALERTS.NO_PROCESS_PYTHON)
 
             r = RAM()
 
@@ -1053,13 +1050,13 @@ async def machine_info(message: Message):
             ))
             tracker.log(
                 command=("MACHINE_INFO", F.LIGHTMAGENTA_EX),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
             await sleep(2)
             await message.answer_animation(cfg.MEDIA.NOT_IN_LPAA_WHITELIST)

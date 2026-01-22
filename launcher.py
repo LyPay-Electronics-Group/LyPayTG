@@ -4,19 +4,20 @@ from os import mkdir, listdir, rename, system, getenv, getcwd as cwd
 from psutil import process_iter, AccessDenied as psutil_AccessDenied
 from os.path import exists
 from platform import system as get_platform_name
-
 from dotenv import load_dotenv
-from webbrowser import open as w_open
+
+from asyncio import run as aio_run, run_coroutine_threadsafe, get_running_loop
 
 from time import time as unix
 from datetime import datetime
-
 from colorama import Fore as F, Style as S, init as c_init, just_fix_windows_console
+from webbrowser import open as w_open
 
 from data import config as cfg
 from data.txt import EXE as txt_EXE
-from scripts import j2, firewall3, lpsql, exelink
+from scripts import j2, firewall3, lpsql, messenger
 from scripts.i import to_id as i_to_id
+from scripts.memory import qr
 
 c_init(autoreset=True)
 just_fix_windows_console()
@@ -54,7 +55,7 @@ class Launcher:
             'exit':      [''],
             'help':      [''],
             'search':    ['-user <query>', '-store <query>', '-sql <sql-query>'],
-            'start':     ['main', 'executor', 'admin', 'stores', 'everything'],
+            'start':     ['main', 'admin', 'stores', 'everything'],
             'launch':    [''],
             'stats':     ['-agent <ID>', '-store <ID>'],
             'open':      [''],
@@ -75,18 +76,29 @@ class Launcher:
         }
         self.settings_array = j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)
         if self.settings_array["launch"]:
-            exelink.warn(
-                text=txt_EXE.ALERTS.LAUNCH_EXIT_FAIL_DETECTED,
-                userID=-1
-            )
-            exelink.message(
-                bot='LPAA',
-                text=' ',
-                file_path=cfg.MEDIA.SERVER_DOWN,
-                file_mode='sticker',
-                participantID=cfg.WARNING_GROUP,
-                userID=-1
-            )
+            coroutine = messenger.warn(text=txt_EXE.ALERTS.LAUNCH_EXIT_FAIL_DETECTED)
+            try:
+                run_coroutine_threadsafe(
+                    coroutine,
+                    get_running_loop()
+                )
+            except RuntimeError:
+                aio_run(coroutine)
+
+            coroutine = messenger.message(
+                    bot='LPAA',
+                    text=' ',
+                    file=cfg.MEDIA.SERVER_DOWN,
+                    file_mode='sticker',
+                    chatID=cfg.WARNING_GROUP
+                )
+            try:
+                run_coroutine_threadsafe(
+                    coroutine,
+                    get_running_loop()
+                )
+            except RuntimeError:
+                aio_run(coroutine)
         self.last_error, self.last_success = None, None
         self.platform = get_platform_name()
 
@@ -510,9 +522,6 @@ class Launcher:
             if args[0] in ('main', 'bot', 'every', 'everything', 'all'):
                 setup += f'-core main.py main {self.settings_array['launch_stamp']} '
 
-            if args[0] in ('executor', 'exe', 'every', 'everything', 'all'):
-                setup += f'-core executor.py exe {self.settings_array['launch_stamp']} '
-
             if args[0] in ('admins', 'admin', 'lpaa', 'every', 'everything', 'all'):
                 setup += f'-core admins.py admins {self.settings_array['launch_stamp']} '
 
@@ -546,17 +555,6 @@ class Launcher:
                             "python.exe" if self.platform == 'Windows' else
                             ('python3' if self.platform == 'Linux' else "")
                         ) and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['main.py', self.settings_array['launch_stamp']]:
-                        process.kill()
-                        if not silent:
-                            self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
-                        break
-
-            elif args[0] == 'executor' or args[0] == 'exe':
-                for process in process_iter():
-                    if process.name() == (
-                            "python.exe" if self.platform == 'Windows' else
-                            ('python3' if self.platform == 'Linux' else "")
-                        ) and len(process.cmdline()) > 0 and process.cmdline()[1:] == ['executor.py', self.settings_array['launch_stamp']]:
                         process.kill()
                         if not silent:
                             self.success_handle("off.instance", f"Successfully turned off: {args[0]}")
@@ -606,7 +604,7 @@ class Launcher:
         if args[0] == 'help':
             # todo: help page
             pass
-        elif args[0] in ('main', 'lpaa', 'admin', 'admins', 'lpsb', 'stores', 'store', 'exe', 'every', 'everything', 'all'):
+        elif args[0] in ('main', 'lpaa', 'admin', 'admins', 'lpsb', 'stores', 'store', 'every', 'everything', 'all'):
             off_ok = self.off(*args, silent=True)
             start_ok = self.start(*args, silent=True)
             if off_ok and start_ok:
@@ -808,7 +806,7 @@ class Launcher:
                                      1          # owner
                                  ])
                     if not exists(cfg.PATHS.QR + f"{uid}.png"):
-                        exelink.add(f"qr {uid}", 0)
+                        qr(uid)
                         self.db.insert("qr",
                                   [
                                          uid,   # userID

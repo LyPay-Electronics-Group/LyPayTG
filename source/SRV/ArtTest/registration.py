@@ -5,7 +5,7 @@ from aiogram.types import Message
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, firewall3, tracker, lpsql
+from scripts import memory, firewall3, tracker, lpsql
 from data import txt
 
 
@@ -22,7 +22,7 @@ async def test(message: Message):
         if firewall_status == firewall3.WHITE_ANCHOR:
             tracker.log(
                 command=("REGISTRATION", F.YELLOW + S.BRIGHT),
-                from_user=f.collect_FU(message)
+                from_user=memory.get_user_data(message)
             )
 
             if message.from_user.id not in db.searchall("users", "ID"):
@@ -50,10 +50,10 @@ async def test(message: Message):
             )
 
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(f.get_user_data(message))
             await message.answer(txt.MAIN.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(memory.get_user_data(message))
             await message.answer(txt.MAIN.CMD.NOT_IN_WHITELIST)
     except Exception as e:
         tracker.error(

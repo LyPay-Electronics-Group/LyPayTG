@@ -8,11 +8,11 @@ from asyncio import sleep
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, firewall3, tracker, exelink, lpsql, j2
+from scripts import j2, firewall3, tracker, lpsql, memory, parser, messenger
 from data import config as cfg, txt
 
 from source.LPAA._states import *
-
+from source.MAIN._keyboards import update_keyboard
 
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
@@ -24,12 +24,12 @@ print("LPAA/deposit router")
 @rtr.message(Command("deposit"), mF.chat.id.in_((cfg.HIGH_GROUP, cfg.WARNING_GROUP)))
 async def deposit_help_admins(message: Message):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await message.answer(txt.LPAA.DEPOSIT.ADMIN_HELP)
         tracker.log(
             command=("DEPOSIT", F.CYAN + S.BRIGHT),
             status=("ADMINS_HELP", F.GREEN + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -41,7 +41,7 @@ async def deposit_help_admins(message: Message):
 @rtr.message(Command("deposit"), mF.chat.id.not_in((cfg.HIGH_GROUP, cfg.WARNING_GROUP)))
 async def deposit_help_agents(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             if (await j2.fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["auction"]:
@@ -52,13 +52,13 @@ async def deposit_help_agents(message: Message, state: FSMContext):
             tracker.log(
                 command=("DEPOSIT", F.CYAN + S.BRIGHT),
                 status=("AGENTS_HELP", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
             await sleep(2)
             await message.answer_animation(cfg.MEDIA.NOT_IN_LPAA_WHITELIST)
@@ -72,7 +72,7 @@ async def deposit_help_agents(message: Message, state: FSMContext):
 @rtr.message(DepositFSM.ZERO, mF.text.isnumeric())
 async def deposit_id(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             try:
@@ -97,14 +97,14 @@ async def deposit_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("DEPOSIT", F.CYAN + S.BRIGHT),
                 status=("ID", F.LIGHTBLUE_EX + S.NORMAL),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
 
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
             await sleep(2)
             await message.answer_animation(cfg.MEDIA.NOT_IN_LPAA_WHITELIST)
@@ -118,7 +118,7 @@ async def deposit_id(message: Message, state: FSMContext):
 @rtr.message(DepositFSM.DEPOSIT_AMOUNT, mF.text)
 async def set_amount(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         try:
             amount = int(int(message.text) * cfg.VALUTA.COURSE)
             await state.update_data(DEPOSIT_AMOUNT=amount)
@@ -153,7 +153,7 @@ async def set_amount(message: Message, state: FSMContext):
         tracker.log(
             command=("DEPOSIT", F.CYAN + S.BRIGHT),
             status=("AMOUNT", F.LIGHTBLUE_EX + S.NORMAL),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -165,19 +165,18 @@ async def set_amount(message: Message, state: FSMContext):
 @rtr.message(DepositFSM.CONFIRM, Command("confirm"))
 async def confirm(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         data = await state.get_data()
         db.deposit(data["DEPOSIT_QR"], data["DEPOSIT_AMOUNT"], message.from_user.id)
 
         if data["DEPOSIT_MODE"] == "normal":
-            exelink.message(
+            await messenger.message(
                 text=txt.MAIN.DEPOSIT.UPDATE.format(
                     value=('+' if data["DEPOSIT_AMOUNT"] >= 0 else '') + str(data["DEPOSIT_AMOUNT"])
                 ),
                 bot="MAIN",
-                participantID=data["DEPOSIT_QR"],
-                reset=True,
-                userID=message.from_user.id
+                chatID=data["DEPOSIT_QR"],
+                update_keyboard=update_keyboard,
             )
         else:
             if data["DEPOSIT_AMOUNT"] > 0:
@@ -185,11 +184,10 @@ async def confirm(message: Message, state: FSMContext):
             else:
                 message_text = cfg.VALUTA.MANUAL_REDACT_m.format(amount=-data["DEPOSIT_AMOUNT"])
             for userID in db.search("shopkeepers", "storeID", data["DEPOSIT_QR"], True):
-                exelink.message(
+                await messenger.message(
                     text=message_text,
                     bot="LPSB",
-                    participantID=userID["userID"],
-                    userID=message.from_user.id
+                    chatID=userID["userID"]
                 )
                 await sleep(1/30)
 
@@ -198,7 +196,7 @@ async def confirm(message: Message, state: FSMContext):
         await message.answer(txt.LPAA.DEPOSIT.OK)
         tracker.log(
             command=("CONFIRM", F.GREEN + S.BRIGHT),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -212,7 +210,7 @@ async def confirm(message: Message, state: FSMContext):
 @rtr.message(Command("high_deposit"), mF.chat.id == cfg.HIGH_GROUP)
 async def high_deposit(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         sid = db.search("shopkeepers", "userID", message.from_user.id)
         all_stores = db.searchall("stores", "ID")
         if len(all_stores) > 0:
@@ -229,7 +227,7 @@ async def high_deposit(message: Message, state: FSMContext):
         tracker.log(
             command=("HIGH_DEPOSIT", F.LIGHTGREEN_EX),
             status=("INITIALISE", F.GREEN + S.BRIGHT),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -241,7 +239,7 @@ async def high_deposit(message: Message, state: FSMContext):
 @rtr.message(HighDepositFSM.DEPOSIT_QR, mF.text)
 async def high_deposit_choose_id(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         pick = message.text
         if pick[0] == 'u':
             try:
@@ -258,7 +256,7 @@ async def high_deposit_choose_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("HIGH_DEPOSIT", F.LIGHTGREEN_EX),
                 status=("UID", F.GREEN + S.BRIGHT),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         elif pick[0] == 's':
             store = pick[1:]
@@ -271,14 +269,14 @@ async def high_deposit_choose_id(message: Message, state: FSMContext):
             tracker.log(
                 command=("HIGH_DEPOSIT", F.LIGHTGREEN_EX),
                 status=("SID", F.GREEN + S.BRIGHT),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         else:
             await message.answer(txt.LPAA.BAD_ARG)
             tracker.log(
                 command=("HIGH_DEPOSIT", F.LIGHTGREEN_EX),
                 status=("BAD_ARG", F.RED),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -290,7 +288,7 @@ async def high_deposit_choose_id(message: Message, state: FSMContext):
 @rtr.message(HighDepositFSM.DEPOSIT_AMOUNT, mF.text)
 async def high_deposit_amount_input(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         try:
             value = int(message.text)
             data = (await state.get_data())["HIGH_DEPOSIT_ID"]
@@ -304,14 +302,14 @@ async def high_deposit_amount_input(message: Message, state: FSMContext):
             tracker.log(
                 command=("HIGH_DEPOSIT", F.LIGHTGREEN_EX),
                 status=("AMOUNT", F.GREEN + S.BRIGHT),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         except ValueError:
             await message.asnwer(txt.LPAA.BAD_ARG)
             tracker.log(
                 command=("HIGH_DEPOSIT", F.LIGHTGREEN_EX),
                 status=("BAD_ARG", F.RED),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -323,7 +321,7 @@ async def high_deposit_amount_input(message: Message, state: FSMContext):
 @rtr.message(Command("confirm"), HighDepositFSM.CONFIRM)
 async def high_deposit_confirm(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         data = await state.get_data()
         db.deposit(data["HIGH_DEPOSIT_ID"], data["HIGH_DEPOSIT_AMOUNT"], message.from_user.id)
         if data["HIGH_DEPOSIT_AMOUNT"] > 0:
@@ -332,20 +330,18 @@ async def high_deposit_confirm(message: Message, state: FSMContext):
             message_text = cfg.VALUTA.MANUAL_REDACT_m.format(amount=-data["HIGH_DEPOSIT_AMOUNT"])
 
         if type(data["HIGH_DEPOSIT_ID"]) is int:
-            exelink.message(
+            await messenger.message(
                 text=message_text,
                 bot="MAIN",
-                participantID=data["HIGH_DEPOSIT_ID"],
-                reset=True,
-                userID=message.from_user.id
+                chatID=data["HIGH_DEPOSIT_ID"],
+                update_keyboard=update_keyboard
             )
         else:
             for userID in db.search("shopkeepers", "storeID", data["HIGH_DEPOSIT_ID"], True):
-                exelink.message(
+                await messenger.message(
                     text=message_text,
                     bot="LPSB",
-                    participantID=userID["userID"],
-                    userID=message.from_user.id
+                    chatID=userID["userID"]
                 )
                 await sleep(1/30)
         await state.clear()
@@ -353,7 +349,7 @@ async def high_deposit_confirm(message: Message, state: FSMContext):
         tracker.log(
             command=("HIGH_DEPOSIT", F.LIGHTGREEN_EX),
             status=("CONFIRM", F.LIGHTGREEN_EX + S.BRIGHT),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(

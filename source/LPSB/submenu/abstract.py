@@ -8,7 +8,7 @@ from colorama import Fore as F, Style as S
 from os import listdir
 from os.path import exists
 
-from scripts import j2, f, tracker, lpsql, exelink
+from scripts import j2, tracker, lpsql, memory, parser
 from data import config as cfg, txt
 
 from source.LPSB._states import *
@@ -23,7 +23,7 @@ print("LPSB/menu/abstract subrouter")
 @rtr.callback_query(MenuFSM.MENU, mF.data == "statistics_cb")
 async def statistics(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await callback.message.edit_text("Главное меню\n> 'Статистика 📈'")
         await callback.answer()
         try:
@@ -49,26 +49,25 @@ async def statistics(callback: CallbackQuery, state: FSMContext):
             await callback.message.answer(txt.LPSB.CMD.STATISTICS.format(
                 store=id_,
                 balance=balance_,
-                items='   '+'\n   '.join([f"{f.de_anchor(item_key)}: {item_value}" for item_key, item_value in items_.items()])
+                items='   '+'\n   '.join([f"{parser.de_anchor(item_key)}: {item_value}" for item_key, item_value in items_.items()])
             ))
             tracker.log(
                 command=("MENU", F.BLUE + S.BRIGHT),
                 status=("STATISTICS", F.YELLOW + S.DIM),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
         except:
             await callback.message.answer(txt.LPSB.ITEMS.SOMETHING_WENT_WRONG)
             tracker.log(
                 command=("MENU", F.BLUE + S.BRIGHT),
                 status=("STATISTICS_FAIL", F.RED + S.DIM),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
         await state.clear()
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
     except Exception as e:
         tracker.error(
@@ -89,7 +88,7 @@ async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, 
         for file in listdir(cfg.PATHS.STORES_KEYBOARDS + store_id):
             js = await j2.fromfile_async(cfg.PATHS.STORES_KEYBOARDS + store_id + '/' + file)
             keyboard.add(InlineKeyboardButton(
-                text=f"{f.de_anchor(js["text"])}  |  {js["price"]} {cfg.VALUTA.SHORT}",
+                text=f"{parser.de_anchor(js["text"])}  |  {js["price"]} {cfg.VALUTA.SHORT}",
                 callback_data="none")
             )
             js.pop("call")
@@ -107,7 +106,7 @@ async def drop_callback(callback: CallbackQuery):
 @rtr.callback_query(MenuFSM.MENU, mF.data == "preview_cb")
 async def preview(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await callback.message.edit_text("Главное меню\n> 'Предпросмотр 📲'")
         await callback.answer()
         try:
@@ -154,21 +153,20 @@ async def preview(callback: CallbackQuery, state: FSMContext):
             tracker.log(
                 command=("MENU", F.BLUE + S.BRIGHT),
                 status=("PREVIEW", F.YELLOW + S.DIM),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
         except:
             await callback.message.answer(txt.LPSB.ITEMS.SOMETHING_WENT_WRONG)
             tracker.log(
                 command=("MENU", F.BLUE + S.BRIGHT),
                 status=("PREVIEW_FAIL", F.RED + S.DIM),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
         await state.clear()
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
     except Exception as e:
         tracker.error(
@@ -180,7 +178,7 @@ async def preview(callback: CallbackQuery, state: FSMContext):
 @rtr.callback_query(MenuFSM.MENU, mF.data == "info_cb")
 async def info(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await callback.message.edit_text("Главное меню\n> 'Информация ℹ️'")
         await callback.answer()
         store = db.search("stores", "ID", db.search("shopkeepers", "userID", callback.from_user.id)["storeID"])
@@ -197,14 +195,13 @@ async def info(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("MENU", F.BLUE + S.BRIGHT),
             status=("INFO", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
         await state.clear()
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
     except Exception as e:
         tracker.error(

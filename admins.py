@@ -11,8 +11,8 @@ from sys import argv
 from asyncio import run, sleep
 from colorama import Fore as F, Style as S, init as col_init, just_fix_windows_console
 
-from scripts import j2, tracker, exelink
-from scripts.f import read_sublist as f_read_sublist, send_message as f_send_message
+from scripts import j2, tracker
+import scripts.memory
 from data import config as cfg
 
 from source.LPAA.abstract import rtr as abstract_r
@@ -42,61 +42,26 @@ disp.include_routers(
 bot = Bot(getenv("LYPAY_ADMINS_TOKEN"), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
-async def send_message_(to: int,
-                        message: str,
-                        file: str | None = None, file_mode: str | None = None,
-                        reset_keyboard: bool = False):
-    try:
-        await f_send_message(
-            bot=bot, to=to, message=message,
-            file=file, file_mode=file_mode,
-            reset_keyboard=reset_keyboard
-        )
-    except Exception as e:
-        tracker.error(
-            e=e,
-            userID=0
-        )
-
-
-async def download_photo_(file_id: str, path: str):
-    try:
-        await bot.download(file_id, path)
-    except Exception as e:
-        print(e)
-        tracker.error(
-            e=e,
-            userID=0
-        )
-
-
-async def edit_text_(chat_id: int, message_id: int, text: str):
-    try:
-        await bot.edit_message_text(text, chat_id=chat_id, message_id=message_id)
-    except Exception as e:
-        tracker.error(
-            e=e,
-            userID=0
-        )
-
-
 @disp.startup()
 async def ccc_on_startup():
-    for key, value in (await f_read_sublist("ccc/lpaa")).items():
-        exelink.ccc_remove_keyboard(
-            bot='lpaa',
-            chat_id=key,
-            message_id=value,
-            text="Сервер был перезапущен /> сообщение с клавиатурой удалено автоматически",
-            userID=int(key)
-        )
-        await sleep(0.005)
-        exelink.sublist(
-            mode='remove',
-            name='ccc/lpaa',
-            key=key,
-            userID=int(key)
-        )
+    for key, value in (await scripts.memory.read_sublist("ccc/lpaa")).items():
+        try:
+            await bot.edit_message_text(
+                text="Сервер был перезапущен, сообщение с клавиатурой удалено автоматически.",
+                chat_id=key,
+                message_id=int(value)
+            )
+            await sleep(0.015)
+            await scripts.memory.rewrite_sublist(
+                mode='remove',
+                name='ccc/lpaa',
+                key=key
+            )
+        except Exception as e:
+            tracker.error(
+                e=e,
+                userID=0
+            )
 
 
 # -=-=-=-

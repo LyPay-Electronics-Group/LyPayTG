@@ -9,7 +9,7 @@ from colorama import Fore as F, Style as S
 from random import randint
 from os.path import exists
 
-from scripts import f, tracker, firewall3, exelink, lpsql
+from scripts import tracker, firewall3, lpsql, memory, parser
 from scripts.j2 import fromfile as j_fromfile
 from data import config as cfg, txt
 
@@ -26,7 +26,7 @@ print("LPSB/access router")
 @rtr.message(Command("access"))
 async def access(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             current = await state.get_state()
@@ -42,24 +42,23 @@ async def access(message: Message, state: FSMContext):
                         txt.LPSB.ACCESS.MENU,
                         reply_markup=main_keyboard.accessCMD
                     )).message_id
-                    exelink.sublist(
+                    await memory.rewrite_sublist(
                         mode='add',
                         name='ccc/lpsb',
                         key=message.chat.id,
-                        data=m_id,
-                        userID=message.from_user.id
+                        data=m_id
                     )
                     tracker.log(
                         command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                         status=("MENU", F.YELLOW + S.NORMAL),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     await message.answer(txt.LPSB.ACCESS.NOT_HOST)
                     tracker.log(
                         command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                         status=("NOT_HOST", F.RED + S.NORMAL),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             elif current not in RegistrationFSM.__states__:
                 await message.delete()
@@ -68,13 +67,13 @@ async def access(message: Message, state: FSMContext):
                 tracker.log(
                     command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                     status=("FORCED_REGISTRATION", F.LIGHTMAGENTA_EX + S.BRIGHT),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.NOT_IN_WHITELIST)
             await message.answer_sticker(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS[
                                              randint(0, len(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS) - 1)
@@ -90,21 +89,20 @@ async def access(message: Message, state: FSMContext):
 @rtr.callback_query(AccessFSM.MENU, mF.data == "access_add_cb")
 async def access_add(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Меню доступа\n> '➕ Добавить пользователя'")
         await callback.answer()
         await callback.message.answer(txt.LPSB.ACCESS.ADD.START)
         await state.set_state(AccessFSM.ADD_PICK)
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
         tracker.log(
             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
             status=("ADD", F.GREEN + S.NORMAL),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -116,9 +114,9 @@ async def access_add(callback: CallbackQuery, state: FSMContext):
 @rtr.message(AccessFSM.ADD_PICK, mF.text)
 async def access_add_choose(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         censor = tracker.censor(
-            from_user=f.collect_FU(message),
+            from_user=parser.get_user_data(message),
             text=message.text
         )
         if not censor:
@@ -135,14 +133,14 @@ async def access_add_choose(message: Message, state: FSMContext):
                     tracker.log(
                         command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                         status=("USER_HAS_STORE", F.RED + S.NORMAL),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     await message.answer(txt.LPSB.ACCESS.ADD.USER_ALREADY_ADDED)
                     tracker.log(
                         command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                         status=("USER_ALREADY_ADDED", F.RED + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             else:
                 user = db.search("users", "ID", user)
@@ -158,14 +156,14 @@ async def access_add_choose(message: Message, state: FSMContext):
                 tracker.log(
                     command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                     status=("CONFIRM_ADDING", F.GREEN + S.NORMAL),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         except ValueError:
             await message.answer(txt.LPSB.ACCESS.BAD_FORMAT)
             tracker.log(
                 command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                 status=("BAD_FORMAT", F.RED + S.NORMAL),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -177,7 +175,7 @@ async def access_add_choose(message: Message, state: FSMContext):
 @rtr.message(AccessFSM.ADD_CONFIRM, Command("confirm"))
 async def access_add_confirm(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         user = (await state.get_data())["PICK"]
         store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
         db.insert(
@@ -191,7 +189,7 @@ async def access_add_confirm(message: Message, state: FSMContext):
         tracker.log(
             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
             status=("NEW_SAVED", F.GREEN + S.NORMAL),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -203,35 +201,34 @@ async def access_add_confirm(message: Message, state: FSMContext):
 @rtr.callback_query(AccessFSM.MENU, mF.data == "access_remove_cb")
 async def access_remove(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Меню доступа\n> '➖ Удалить пользователя'")
         await callback.answer()
         await callback.message.answer(txt.LPSB.ACCESS.REMOVE.START)
         await state.set_state(AccessFSM.REMOVE_PICK)
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
         tracker.log(
             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
             status=("REMOVE", F.GREEN + S.NORMAL),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
             e=e,
-            userID=main_keyboard.cancelChequeCMD.from_user.id
+            userID=callback.from_user.id
         )
 
 
 @rtr.message(AccessFSM.REMOVE_PICK, mF.text)
 async def access_remove_choose(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         censor = tracker.censor(
-            from_user=f.collect_FU(message),
+            from_user=parser.get_user_data(message),
             text=message.text
         )
         if not censor:
@@ -245,7 +242,7 @@ async def access_remove_choose(message: Message, state: FSMContext):
                 tracker.log(
                     command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                     status=("SELF_REMOVE_TRY", F.RED + S.NORMAL),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             else:
                 users_store = db.search("shopkeepers", "userID", user)
@@ -264,21 +261,21 @@ async def access_remove_choose(message: Message, state: FSMContext):
                         tracker.log(
                             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                             status=("CONFIRM_REMOVING", F.GREEN + S.NORMAL),
-                            from_user=f.collect_FU(message)
+                            from_user=parser.get_user_data(message)
                         )
                     else:
                         await message.answer(txt.LPSB.ACCESS.REMOVE.USER_HAS_NO_ACCESS)
                         tracker.log(
                             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                             status=("USER_HAS_ANOTHER_STORE", F.RED + S.DIM),
-                            from_user=f.collect_FU(message)
+                            from_user=parser.get_user_data(message)
                         )
                 else:
                     await message.answer(txt.LPSB.ACCESS.REMOVE.USER_HAS_NO_ACCESS)
                     tracker.log(
                         command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                         status=("USER_HAS_NOT_STORE", F.RED + S.NORMAL),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
 
         except ValueError:
@@ -286,7 +283,7 @@ async def access_remove_choose(message: Message, state: FSMContext):
             tracker.log(
                 command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                 status=("BAD_FORMAT", F.RED + S.NORMAL),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -298,7 +295,7 @@ async def access_remove_choose(message: Message, state: FSMContext):
 @rtr.message(AccessFSM.REMOVE_CONFIRM, Command("confirm"))
 async def access_remove_confirm(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         user = (await state.get_data())["PICK"]
         store_id = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
 
@@ -314,7 +311,7 @@ async def access_remove_confirm(message: Message, state: FSMContext):
         tracker.log(
             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
             status=("REMOVED", F.GREEN + S.NORMAL),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -326,14 +323,13 @@ async def access_remove_confirm(message: Message, state: FSMContext):
 @rtr.callback_query(AccessFSM.MENU, mF.data == "access_monitor_cb")
 async def access_monitor(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text("Меню доступа\n> '👁️‍🗨️ Просмотр пользователей'")
         await callback.answer()
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
 
         userIDs = list(map(
@@ -362,7 +358,7 @@ async def access_monitor(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
             status=("MONITOR", F.LIGHTBLUE_EX + S.NORMAL),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -374,21 +370,21 @@ async def access_monitor(callback: CallbackQuery, state: FSMContext):
 @rtr.message(Command("get_access"))
 async def access_request(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         if message.from_user.id not in db.searchall("shopkeepers", "userID"):
             await message.answer(txt.LPSB.ACCESS.ADD.REQUEST_START)
             await state.clear()
             tracker.log(
                 command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                 status=("REQUEST", F.BLUE + S.NORMAL),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
 
             qr = db.search("qr", "userID", message.from_user.id)
             if qr is None or qr["fileID_lpsb"] is None:
                 path = cfg.PATHS.QR + f"{message.from_user.id}.png"
                 if not exists(path):
-                    exelink.add(f"qr {message.from_user.id}", message.from_user.id)
+                    memory.qr(message.from_user.id)
                     while not exists(path):
                         await sleep(.5)
                 if qr is None:
@@ -410,7 +406,7 @@ async def access_request(message: Message, state: FSMContext):
             tracker.log(
                 command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
                 status=("ALREADY_HAS", F.BLUE + S.NORMAL),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -422,12 +418,12 @@ async def access_request(message: Message, state: FSMContext):
 # @rtr.message(Command("get_access"))
 async def temp_access(message: Message):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await message.answer("Открытие доступа пока что отключено 🥺")
         tracker.log(
             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
             status=("REQUEST", F.BLUE + S.NORMAL),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(

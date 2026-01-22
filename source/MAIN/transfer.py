@@ -6,7 +6,7 @@ from aiogram import F as mF
 
 from colorama import Fore as F, Style as S
 
-from scripts import f, firewall3, tracker, exelink, lpsql
+from scripts import firewall3, tracker, lpsql, memory, parser
 from scripts.j2 import fromfile as j_fromfile
 from data import config as cfg, txt
 
@@ -24,7 +24,7 @@ print("MAIN/transfer router")
 @rtr.message(mF.text == "📤 Перевод пользователю")
 async def transfer(message: Message):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         if message.from_user.id in db.searchall("users", "ID"):
             firewall_status = firewall3.check(message.from_user.id)
             if firewall_status == firewall3.WHITE_ANCHOR:
@@ -32,29 +32,28 @@ async def transfer(message: Message):
                                      reply_markup=main_keyboard.update_keyboard(message.from_user.id, True))
                 m_id = (await message.answer(txt.MAIN.TRANSFER.START.format(code=message.from_user.id),
                                              reply_markup=main_keyboard.transferCMD)).message_id
-                exelink.sublist(
+                await memory.rewrite_sublist(
                     mode='add',
                     name='ccc/main',
                     key=message.chat.id,
-                    data=m_id,
-                    userID=message.from_user.id
+                    data=m_id
                 )
                 tracker.log(
                     command=("TRANSFER", F.GREEN + S.NORMAL),
                     status=("START", F.GREEN + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             elif firewall_status == firewall3.BLACK_ANCHOR:
-                tracker.black(f.collect_FU(message))
+                tracker.black(parser.get_user_data(message))
                 await message.answer(txt.MAIN.CMD.IN_BLACKLIST)
             else:
-                tracker.gray(f.collect_FU(message))
+                tracker.gray(parser.get_user_data(message))
                 await message.answer(txt.MAIN.CMD.NOT_IN_WHITELIST)
         else:
             tracker.log(
                 command=("TRANSFER", F.GREEN + S.NORMAL),
                 status=("NOT_REGISTERED", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             await message.answer(txt.MAIN.REGISTRATION.NOT_REGISTERED)
     except Exception as e:
@@ -67,7 +66,7 @@ async def transfer(message: Message):
 @rtr.callback_query(mF.data == "transfer_qr_cb")
 async def transfer_proceed_qr(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text(txt.MAIN.TRANSFER.QR_ROUTE)
         await callback.answer()
         await state.update_data(MODE=0)
@@ -75,7 +74,7 @@ async def transfer_proceed_qr(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
             status=("QR_ROUTE", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -87,7 +86,7 @@ async def transfer_proceed_qr(callback: CallbackQuery, state: FSMContext):
 @rtr.callback_query(mF.data == "transfer_tag_cb")
 async def transfer_proceed_tag(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text(txt.MAIN.TRANSFER.TAG_ROUTE.format(tag=callback.from_user.username))
         await callback.answer()
         await state.update_data(MODE=1)
@@ -95,7 +94,7 @@ async def transfer_proceed_tag(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
             status=("TAG_ROUTE", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -107,7 +106,7 @@ async def transfer_proceed_tag(callback: CallbackQuery, state: FSMContext):
 @rtr.callback_query(mF.data == "transfer_name_cb")
 async def transfer_proceed_name(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text(txt.MAIN.TRANSFER.NAME_ROUTE)
         await callback.answer()
         await state.update_data(MODE=2)
@@ -115,7 +114,7 @@ async def transfer_proceed_name(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
             status=("NAME_ROUTE", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -127,7 +126,7 @@ async def transfer_proceed_name(callback: CallbackQuery, state: FSMContext):
 @rtr.message(TransferFSM.USER, mF.text)
 async def transfer_get_user(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         text = message.text.replace(' ', '').replace('\n', '').replace('@', '')
         ok = False
         mode = (await state.get_data())["MODE"]
@@ -141,14 +140,14 @@ async def transfer_get_user(message: Message, state: FSMContext):
                 tracker.log(
                     command=("TRANSFER", F.GREEN + S.NORMAL),
                     status=("ID", F.GREEN + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             except ValueError:
                 await message.answer(txt.MAIN.TRANSFER.BAD_FORMAT)
                 tracker.log(
                     command=("TRANSFER", F.GREEN + S.NORMAL),
                     status=("ID", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         elif mode == 1:  # by tag
             text = text.replace('@', '').replace('https://t.me/', '')
@@ -160,7 +159,7 @@ async def transfer_get_user(message: Message, state: FSMContext):
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("TAG", F.GREEN + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                     break
             if not ok:
@@ -168,7 +167,7 @@ async def transfer_get_user(message: Message, state: FSMContext):
                 tracker.log(
                     command=("TRANSFER", F.GREEN + S.NORMAL),
                     status=("TAG", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         elif mode == 2:  # by name
             text = text.capitalize()
@@ -183,7 +182,7 @@ async def transfer_get_user(message: Message, state: FSMContext):
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("NAME", F.GREEN + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     await message.answer(txt.MAIN.TRANSFER.NAMESAKE_WARNING)
@@ -192,14 +191,14 @@ async def transfer_get_user(message: Message, state: FSMContext):
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("EQUAL_NAME", F.RED + S.NORMAL),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             else:
                 await message.answer(txt.MAIN.TRANSFER.USER_NOT_REGISTERED)
                 tracker.log(
                     command=("TRANSFER", F.GREEN + S.NORMAL),
                     status=("NAME", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         else:
             mode = None
@@ -207,7 +206,7 @@ async def transfer_get_user(message: Message, state: FSMContext):
             tracker.log(
                 command=("TRANSFER", F.GREEN + S.NORMAL),
                 status=("BAD_FORMAT", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
 
         if ok:   # при успехе заменить text на найденный id
@@ -243,7 +242,7 @@ async def transfer_get_user(message: Message, state: FSMContext):
 @rtr.message(TransferFSM.CONFIRM1, Command("confirm"))
 async def transfer_confirm1(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await state.set_state(TransferFSM.INPUT)
         await message.answer(txt.MAIN.TRANSFER.INPUT.format(
             balance=db.balance_view(message.from_user.id)
@@ -251,7 +250,7 @@ async def transfer_confirm1(message: Message, state: FSMContext):
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
             status=("CONFIRM_1", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -263,9 +262,9 @@ async def transfer_confirm1(message: Message, state: FSMContext):
 @rtr.message(TransferFSM.INPUT, mF.text)
 async def transfer_get_amount(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         censor = tracker.censor(
-            from_user=f.collect_FU(message),
+            from_user=parser.get_user_data(message),
             text=message.text
         )
         if not censor:
@@ -301,21 +300,21 @@ async def transfer_get_amount(message: Message, state: FSMContext):
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("AMOUNT", F.GREEN + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     await message.answer(txt.MAIN.TRANSFER.NOT_ENOUGH)
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("NOT_ENOUGH_MONEY", F.RED + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             else:
                 await message.answer(txt.MAIN.TRANSFER.SUBZERO_INPUT_VALUE)
                 tracker.log(
                     command=("TRANSFER", F.GREEN + S.NORMAL),
                     status=("AMOUNT_SUBZERO", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         except ValueError:
             await message.answer(txt.MAIN.TRANSFER.BAD_FORMAT)
@@ -329,7 +328,7 @@ async def transfer_get_amount(message: Message, state: FSMContext):
 @rtr.message(TransferFSM.CONFIRM2, Command("confirm"))
 async def transfer_confirm2(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         data = await state.get_data()
         from_ = db.search("users", "ID", message.from_user.id)
         db.transfer(message.from_user.id, data["USER"], data["INPUT"])
@@ -343,19 +342,6 @@ async def transfer_confirm2(message: Message, state: FSMContext):
             ),
             chat_id=data["USER"]
         )
-        ''' до v2.2:
-        exelink.message(
-            text=txt.MAIN.TRANSFER.UPDATE.format(
-                name=from_["name"],
-                group=from_["class"],
-                tag='@'+from_["tag"] if from_["tag"] else '',
-                amount=('+' if data["INPUT"] >= 0 else '') + str(data["INPUT"])
-            ),
-            bot='MAIN',
-            participantID=data["USER"],
-            userID=message.from_user.id
-        )
-        '''
         await message.answer(txt.MAIN.TRANSFER.OK % ('-' + str(data["INPUT"])),
                              reply_markup=main_keyboard.update_keyboard(message.from_user.id))
 
@@ -363,7 +349,7 @@ async def transfer_confirm2(message: Message, state: FSMContext):
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
             status=("SUCCESSFUL", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(

@@ -9,7 +9,7 @@ from os.path import exists
 from shutil import rmtree
 
 from data.config import MEDIA, PATHS
-from scripts import f, firewall3, tracker, exelink, lpsql
+from scripts import memory, firewall3, tracker, exelink, lpsql
 from data import txt
 
 
@@ -36,7 +36,7 @@ async def go_next(message: Message, state: FSMContext):
             tracker.log(
                 command=("ARTTEST", F.LIGHTGREEN_EX + S.BRIGHT),
                 status=("NEXT", F.LIGHTGREEN_EX),
-                from_user=f.collect_FU(message)
+                from_user=f.get_user_data(message)
             )
 
             if test_num is None:
@@ -68,10 +68,10 @@ async def go_next(message: Message, state: FSMContext):
 
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(f.get_user_data(message))
         else:
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(f.get_user_data(message))
             await sleep(2)
             await message.answer_animation(MEDIA.NOT_IN_LPAA_WHITELIST)
             print(F.LIGHTBLACK_EX + S.DIM + str(message.from_user.id))
@@ -95,7 +95,7 @@ async def end_test(message: Message, state: FSMContext):
                 tracker.log(
                     command=("ARTTEST", F.LIGHTGREEN_EX + S.BRIGHT),
                     status=("END_CURRENT", F.LIGHTYELLOW_EX),
-                    from_user=f.collect_FU(message)
+                    from_user=f.get_user_data(message)
                 )
                 exelink.sublist(
                     name='arttest',
@@ -116,10 +116,10 @@ async def end_test(message: Message, state: FSMContext):
 
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(f.get_user_data(message))
         else:
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(f.get_user_data(message))
             await sleep(2)
             await message.answer_animation(MEDIA.NOT_IN_LPAA_WHITELIST)
             print(F.LIGHTBLACK_EX + S.DIM + str(message.from_user.id))
@@ -138,7 +138,7 @@ async def reset_test_num(message: Message, state: FSMContext):
             tracker.log(
                 command=("ARTTEST", F.LIGHTGREEN_EX + S.BRIGHT),
                 status=("RESET_TEST_NUM", F.LIGHTRED_EX),
-                from_user=f.collect_FU(message)
+                from_user=memory.get_user_data(message)
             )
             await state.update_data(TEST_NUM=0)
             exelink.sublist(
@@ -162,10 +162,10 @@ async def reset_test_num(message: Message, state: FSMContext):
             await message.answer(f"Текущий тест сброшен (удалены все материалы).")
         elif firewall_status == firewall3.BLACK_ANCHOR:
             await message.answer(txt.LPAA.IN_BLACKLIST)
-            tracker.black(f.collect_FU(message))
+            tracker.black(memory.get_user_data(message))
         else:
             await message.answer(txt.LPAA.NOT_IN_WHITELIST)
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(f.get_user_data(message))
             await sleep(2)
             await message.answer_animation(MEDIA.NOT_IN_LPAA_WHITELIST)
             print(F.LIGHTBLACK_EX + S.DIM + str(message.from_user.id))

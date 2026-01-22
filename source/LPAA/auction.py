@@ -7,7 +7,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from colorama import Fore as F, Style as S
 
-from scripts import f, firewall3, tracker, lpsql, exelink
+from scripts import firewall3, tracker, lpsql, memory, parser, messenger
 from scripts.j2 import fromfile as j_fromfile
 from data import txt
 from data.config import PATHS
@@ -25,7 +25,7 @@ print("LPAA/auction router")
 @rtr.message(Command("auction"))
 async def auction_sequence(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt])
+        memory.update_config(config, [txt])
         auc_num = message.text.split()[1:]
         if len(auc_num) == 0:
             lotIDs = db.searchall("auction", "lotID")
@@ -38,7 +38,7 @@ async def auction_sequence(message: Message, state: FSMContext):
         tracker.log(
             command=("AUCTION_LOT", F.CYAN),
             status=("START", F.YELLOW),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -50,14 +50,14 @@ async def auction_sequence(message: Message, state: FSMContext):
 @rtr.message(AuctionFSM.NAME, mF.text)
 async def set_name(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt])
+        memory.update_config(config, [txt])
         await state.update_data(NAME=message.text)
         await message.answer(txt.LPAA.AUCTION.PRICE)
         await state.set_state(AuctionFSM.PRICE)
         tracker.log(
             command=("AUCTION_LOT", F.CYAN),
             status=("NAME", F.YELLOW),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -69,7 +69,7 @@ async def set_name(message: Message, state: FSMContext):
 @rtr.message(AuctionFSM.PRICE, mF.text)
 async def set_price(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt])
+        memory.update_config(config, [txt])
         try:
             price = int(message.text)
             if price <= 0:
@@ -81,14 +81,14 @@ async def set_price(message: Message, state: FSMContext):
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),
                 status=("PRICE", F.YELLOW),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         except ValueError:
             await message.answer(txt.LPAA.BAD_ARG)
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),
                 status=("PRICE", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -100,7 +100,7 @@ async def set_price(message: Message, state: FSMContext):
 @rtr.message(AuctionFSM.AUC_ID, mF.text)
 async def set_buyer(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt])
+        memory.update_config(config, [txt])
         try:
             auc_id = int(message.text)
             if auc_id not in db.searchall("stores", "auctionID"):
@@ -119,12 +119,11 @@ async def set_buyer(message: Message, state: FSMContext):
                     callback_data=f"lot+{saved["LOT"]}"
                 )]]).as_markup()
             )).message_id
-            exelink.sublist(
+            await memory.rewrite_sublist(
                 mode='add',
                 name='ccc/lpaa',
                 key=message.chat.id,
-                data=m_id,
-                userID=message.from_user.id
+                data=m_id
             )
             db.insert("auction", [
                 saved["LOT"],       # lotID
@@ -137,14 +136,14 @@ async def set_buyer(message: Message, state: FSMContext):
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),
                 status=("AUC_ID", F.YELLOW),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         except ValueError:
             await message.answer(txt.LPAA.BAD_ARG)
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),
                 status=("AUC_ID", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -156,7 +155,7 @@ async def set_buyer(message: Message, state: FSMContext):
 @rtr.callback_query(mF.data.count("lot") > 0)
 async def confirm_buying(callback: CallbackQuery):
     try:
-        f.update_config(config, [txt])
+        memory.update_config(config, [txt])
         await callback.answer()
         lotID = int(callback.data[4:])
         record = db.search("auction", "lotID", lotID, True)[-1]
@@ -168,27 +167,25 @@ async def confirm_buying(callback: CallbackQuery):
             # НУЖНА ПРОВЕРКА НА ЕДИНИЧНОСТЬ, чтобы исключить редактирование неверной записи
             for userID in db.searchall("shopkeepers", "userID"):
                 if db.search("shopkeepers", "userID", userID)["storeID"] == storeID:
-                    exelink.message(
+                    await messenger.message(
                         text=txt.LPAA.AUCTION.MESSAGE.format(
                             lot=lotID,
                             name=record["name"],
                             price=record["price"]
                         ),
                         bot="LPSB",
-                        participantID=userID,
-                        userID=callback.from_user.id
+                        chatID=userID
                     )
-            exelink.sublist(
+            await memory.rewrite_sublist(
                 mode='remove',
                 name='ccc/lpaa',
-                key=callback.message.chat.id,
-                userID=callback.from_user.id
+                key=callback.message.chat.id
             )
             await callback.message.edit_text(callback.message.text + txt.LPAA.AUCTION.CONFIRMED)
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),
                 status=("CONFIRM", F.GREEN),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
         except lpsql.errors.NotEnoughBalance:
             await callback.message.answer(txt.LPAA.AUCTION.NOT_ENOUGH_MONEY.format(
@@ -198,7 +195,7 @@ async def confirm_buying(callback: CallbackQuery):
             tracker.log(
                 command=("AUCTION_LOT", F.CYAN),
                 status=("PRICE", F.RED + S.DIM),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
     except Exception as e:
         tracker.error(

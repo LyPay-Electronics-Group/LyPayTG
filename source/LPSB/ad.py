@@ -7,7 +7,7 @@ from aiogram import F as mF
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, tracker, exelink, lpsql, firewall3
+from scripts import tracker, lpsql, firewall3, memory, parser
 from scripts.j2 import fromfile_async as j_fromfile_async, fromfile as j_fromfile
 from data import config as cfg, txt
 
@@ -25,7 +25,7 @@ print("LPSB/ad router")
 @rtr.message(Command("ad"))
 async def ad(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             current = await state.get_state()
@@ -40,22 +40,21 @@ async def ad(message: Message, state: FSMContext):
                     tracker.log(
                         command=("AD", F.MAGENTA + S.BRIGHT),
                         status=("FORBIDDEN_BY_SETTINGS", F.RED + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
-                elif store_id in (await f.read_sublist("ads")).keys():
+                elif store_id in (await memory.read_sublist("ads")).keys():
                     await message.answer(txt.LPSB.AD.ALREADY_APPROVED)
                     tracker.log(
                         command=("AD", F.MAGENTA + S.BRIGHT),
                         status=("ALREADY_APPROVED", F.YELLOW + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     m_id = (await message.answer(txt.LPSB.AD.START, reply_markup=main_keyboard.adCMD["phase1"])).message_id
-                    exelink.sublist(
+                    await memory.rewrite_sublist(
                         name='ccc/lpsb',
                         key=message.chat.id,
-                        data=m_id,
-                        userID=message.from_user.id
+                        data=m_id
                     )
                     await state.set_state(AdFSM.WAITING)
                     await state.update_data(AD_TEXT=None)
@@ -63,7 +62,7 @@ async def ad(message: Message, state: FSMContext):
                     await state.update_data(AD_VIDEO=None)
                     tracker.log(
                         command=("AD", F.MAGENTA + S.BRIGHT),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             elif current not in RegistrationFSM.__states__:
                 await message.delete()
@@ -72,13 +71,13 @@ async def ad(message: Message, state: FSMContext):
                 tracker.log(
                     command=("MENU", F.BLUE + S.BRIGHT),
                     status=("FORCED_REGISTRATION", F.LIGHTMAGENTA_EX + S.BRIGHT),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.NOT_IN_WHITELIST)
             await message.answer_sticker(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS[
                                              randint(0, len(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS)-1)
@@ -93,9 +92,9 @@ async def ad(message: Message, state: FSMContext):
 @rtr.message(AdFSM.WAITING, mF.text)
 async def proceed_text(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         censor = tracker.censor(
-            from_user=f.collect_FU(message),
+            from_user=parser.get_user_data(message),
             text=message.text,
             text_length_flag=False
         )
@@ -112,7 +111,7 @@ async def proceed_text(message: Message, state: FSMContext):
         tracker.log(
             command=("AD", F.MAGENTA + S.BRIGHT),
             status=("TEXT_PROCEED", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -124,12 +123,12 @@ async def proceed_text(message: Message, state: FSMContext):
 @rtr.message(AdFSM.WAITING, mF.media_group_id)
 async def skip_media_group(message: Message):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await message.answer(txt.LPSB.AD.CANT_HANDLE_MEDIA_GROUP)
         tracker.log(
             command=("AD", F.MAGENTA + S.BRIGHT),
             status=("MEDIA_GROUP", F.RED + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -141,7 +140,7 @@ async def skip_media_group(message: Message):
 @rtr.message(AdFSM.WAITING, mF.photo)
 async def proceed_photo(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         photos = (await state.get_data())["AD_PHOTO"]
         if len(photos) < 4:
             await message.answer(txt.LPSB.AD.PHOTO_APPROVED.format(num=len(photos) + 1))
@@ -149,14 +148,14 @@ async def proceed_photo(message: Message, state: FSMContext):
             tracker.log(
                 command=("AD", F.MAGENTA + S.BRIGHT),
                 status=("PHOTO_PROCEED", F.YELLOW + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         else:
             await message.answer(txt.LPSB.AD.TOO_MANY)
             tracker.log(
                 command=("AD", F.MAGENTA + S.BRIGHT),
                 status=("PHOTO_PROCEED_FAIL", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -168,14 +167,14 @@ async def proceed_photo(message: Message, state: FSMContext):
 @rtr.message(AdFSM.WAITING, mF.video)
 async def proceed_video(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         if (await state.get_data())["AD_VIDEO"] is None:
             if message.video.duration > 60:
                 await message.answer(txt.LPSB.AD.VIDEO_LENGTH_LIMIT)
                 tracker.log(
                     command=("AD", F.MAGENTA + S.BRIGHT),
                     status=("VIDEO_PROCEED_FAIL", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             else:
                 await message.answer(txt.LPSB.AD.VIDEO_APPROVED)
@@ -183,14 +182,14 @@ async def proceed_video(message: Message, state: FSMContext):
                 tracker.log(
                     command=("AD", F.MAGENTA + S.BRIGHT),
                     status=("VIDEO_PROCEED", F.YELLOW + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         else:
             await message.answer(txt.LPSB.AD.TOO_MANY)
             tracker.log(
                 command=("AD", F.MAGENTA + S.BRIGHT),
                 status=("VIDEO_PROCEED_FAIL", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -202,7 +201,7 @@ async def proceed_video(message: Message, state: FSMContext):
 @rtr.callback_query(AdFSM.WAITING, mF.data == "ad_continue_cb")
 async def to_preview(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         data = await state.get_data()
         try:
             text = data["AD_TEXT"]
@@ -223,24 +222,22 @@ async def to_preview(callback: CallbackQuery, state: FSMContext):
             tracker.log(
                 command=("AD", F.MAGENTA + S.BRIGHT),
                 status=("CONTINUE_NO_TEXT", F.RED + S.DIM),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
         else:
             text = txt.LPSB.AD.AD_PREFIX + (text if text is not None else '')
             await callback.message.edit_text(callback.message.text + "\n> 'Просмотр 👁'")
-            exelink.sublist(
+            await memory.rewrite_sublist(
                 mode='remove',
                 name='ccc/lpsb',
-                key=callback.message.chat.id,
-                userID=callback.from_user.id
+                key=callback.message.chat.id
             )
             await state.set_state(AdFSM.CONFIRM)
             m_id = (await callback.message.answer(txt.LPSB.AD.PREVIEW_AND_CHECK, reply_markup=main_keyboard.adCMD["phase2"])).message_id
-            exelink.sublist(
+            await memory.rewrite_sublist(
                 name='ccc/lpsb',
                 key=callback.message.chat.id,
-                data=m_id,
-                userID=callback.from_user.id
+                data=m_id
             )
             media_group = []
             if video is not None:
@@ -269,7 +266,7 @@ async def to_preview(callback: CallbackQuery, state: FSMContext):
             tracker.log(
                 command=("AD", F.MAGENTA + S.BRIGHT),
                 status=("CONTINUE", F.BLUE + S.DIM),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
     except Exception as e:
         tracker.error(
@@ -281,29 +278,26 @@ async def to_preview(callback: CallbackQuery, state: FSMContext):
 @rtr.callback_query(mF.data == "ad_cancel_cb")
 async def cancel_this(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.answer()
         tracker.log(
             command=("CANCELLED", F.RED + S.BRIGHT),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
         c = 0
-        for key, value in (await f.read_sublist('ccc/lpsb')).items():
+        for key, value in (await memory.read_sublist('ccc/lpsb')).items():
             if key == str(callback.message.chat.id):
                 c += 1
-                exelink.ccc_remove_keyboard(
-                    bot='lpsb',
-                    chat_id=key,
-                    message_id=value,
+                await callback.bot.edit_message_text(
                     text="[CCC] Действие отменено.",
-                    userID=callback.from_user.id
+                    chat_id=key,
+                    message_id=value
                 )
-                exelink.sublist(
+                await memory.rewrite_sublist(
                     mode='remove',
                     name='ccc/lpsb',
                     key=key,
-                    data=value,
-                    userID=callback.from_user.id
+                    data=value
                 )
         if c == 0:
             await callback.message.answer(txt.LPSB.CMD.CANCELLED)
@@ -328,43 +322,31 @@ async def cancel_this(callback: CallbackQuery, state: FSMContext):
 @rtr.callback_query(mF.data == "ad_send_to_moderators_cb")
 async def send_ad(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         data = await state.get_data()
         await callback.message.edit_text(callback.message.text + "\n> 'Отправить на модерацию ✨'")
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
         unpacked_data = list()
         for line in data["AD_CACHED"].split(''):
             unpacked_data.append(line.split(':', 2))
-        await f.parse_media_cache_ad_packet(
-            bot=callback.bot,
+        await parser.parse_media_cache_ad_packet(
             tech_message=data["AD_TECH_DATA"],
             sender_id=callback.from_user.id,
-            to=cfg.AD_GROUP,
+            group_id=cfg.AD_GROUP,
             data=unpacked_data
         )
-        # формат пакета - scripts/f.py
-        ''' до v2.2:
-        exelink.message(
-            text=data["AD_TECH_DATA"] + f"\u00a0{callback.from_user.id}",
-            file_path=data["AD_CACHED"],
-            file_mode='media_cache_ad',
-            bot='LPSB',
-            participantID=cfg.AD_GROUP,
-            userID=callback.from_user.id
-        )
-        '''
+        # формат пакета - scripts/parser.py
         await callback.message.answer(txt.LPSB.AD.OK)
         await callback.answer()
         await state.clear()
         tracker.log(
             command=("AD", F.MAGENTA + S.BRIGHT),
             status=("SENT", F.BLUE),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(

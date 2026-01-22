@@ -7,7 +7,7 @@ from aiogram import F as mF
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, tracker, firewall3, exelink, lpsql
+from scripts import tracker, firewall3, lpsql, memory, parser, messenger
 from scripts.j2 import fromfile as j_fromfile
 from data import config as cfg, txt
 
@@ -25,8 +25,8 @@ print("LPSB/registration router")
 @rtr.message(mF.text, RegistrationFSM.CHECK_CODE)
 async def check_code(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
-        base = await f.read_sublist('store_form_link')
+        memory.update_config(config, [txt, cfg, main_keyboard])
+        base = await memory.read_sublist('store_form_link')
         if message.text not in base.keys():
             rng = randint(0, 49)
             for key, value in cfg.MEDIA.BAD_LPSB_REGISTRATION_CODE.items():
@@ -36,15 +36,14 @@ async def check_code(message: Message, state: FSMContext):
             tracker.log(
                 command=("REGISTRATION", F.YELLOW + S.BRIGHT),
                 status=("INCORRECT_CODE", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
-            exelink.warn(
+            await messenger.warn(
                 text=txt.EXE.EVENTS.NEW_WRONG_LPSB_ACCESS_CODE.format(
                     rng=rng,
                     id=message.from_user.id,
                     tag=f"{'@' if message.from_user.username else ''}{message.from_user.username}"
-                ),
-                userID=message.from_user.id
+                )
             )
         else:
             email = base[message.text]
@@ -56,7 +55,7 @@ async def check_code(message: Message, state: FSMContext):
             tracker.log(
                 command=("REGISTRATION", F.YELLOW + S.BRIGHT),
                 status=("CODE_CONFIRMED", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -68,9 +67,9 @@ async def check_code(message: Message, state: FSMContext):
 @rtr.message(mF.text, RegistrationFSM.NAME)
 async def save_name(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         censor = tracker.censor(
-            from_user=f.collect_FU(message),
+            from_user=parser.get_user_data(message),
             text=message.text
         )
         if not censor:
@@ -82,7 +81,7 @@ async def save_name(message: Message, state: FSMContext):
                 tracker.log(
                     command=("REGISTRATION", F.YELLOW + S.BRIGHT),
                     status=("NAME_TOO_LONG", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             else:
                 await state.update_data(NAME=message.text)
@@ -91,14 +90,14 @@ async def save_name(message: Message, state: FSMContext):
                 tracker.log(
                     command=("REGISTRATION", F.YELLOW + S.BRIGHT),
                     status=("NAME_OK", F.YELLOW + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         else:
             await message.answer(txt.LPSB.REGISTRATION.BAD_FORMAT)
             tracker.log(
                 command=("REGISTRATION", F.YELLOW + S.BRIGHT),
                 status=("NAME_BAD", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -110,9 +109,9 @@ async def save_name(message: Message, state: FSMContext):
 @rtr.message(mF.text, RegistrationFSM.DESCRIPTION)
 async def save_description(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         censor = tracker.censor(
-            from_user=f.collect_FU(message),
+            from_user=parser.get_user_data(message),
             text=message.text
         )
         if not censor:
@@ -123,23 +122,22 @@ async def save_description(message: Message, state: FSMContext):
             tracker.log(
                 command=("REGISTRATION", F.YELLOW + S.BRIGHT),
                 status=("DESCRIPTION_TOO_LONG", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         else:
             await state.update_data(DESCRIPTION=message.text)
             m_id = (await message.answer(txt.LPSB.REGISTRATION.LOGO.SENT, reply_markup=main_keyboard.skipLogoCMD)).message_id
-            exelink.sublist(
+            await memory.rewrite_sublist(
                 mode='add',
                 name='ccc/lpsb',
                 key=message.chat.id,
-                data=m_id,
-                userID=message.from_user.id
+                data=m_id
             )
             await state.set_state(RegistrationFSM.LOGO)
             tracker.log(
                 command=("REGISTRATION", F.YELLOW + S.BRIGHT),
                 status=("DESCRIPTION_OK", F.YELLOW + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -151,14 +149,14 @@ async def save_description(message: Message, state: FSMContext):
 @rtr.message(mF.photo, RegistrationFSM.LOGO)
 async def save_logo(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await state.update_data(LOGO=message.photo[-1].file_id)
         await message.answer(txt.LPSB.REGISTRATION.LOGO.OK)
         await state.set_state(RegistrationFSM.END)
         tracker.log(
             command=("REGISTRATION", F.YELLOW + S.BRIGHT),
             status=("LOGO_OK", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
         await get_id(message, state)
     except Exception as e:
@@ -171,12 +169,12 @@ async def save_logo(message: Message, state: FSMContext):
 @rtr.message(~mF.photo, RegistrationFSM.LOGO)
 async def wrong_logo(message: Message):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await message.answer(txt.LPSB.REGISTRATION.LOGO.FORMAT)
         tracker.log(
             command=("REGISTRATION", F.YELLOW + S.BRIGHT),
             status=("LOGO_BAD", F.RED + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -188,7 +186,7 @@ async def wrong_logo(message: Message):
 @rtr.callback_query(mF.data == "skip_cb", RegistrationFSM.LOGO)
 async def skip_logo(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.answer()
         await state.update_data(LOGO=None)
         await callback.message.answer(txt.LPSB.REGISTRATION.LOGO.SKIP)
@@ -196,7 +194,7 @@ async def skip_logo(callback: CallbackQuery, state: FSMContext):
         tracker.log(
             command=("REGISTRATION", F.YELLOW + S.BRIGHT),
             status=("LOGO_SKIP", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
 
         await get_id(callback.message, state)
@@ -222,12 +220,11 @@ async def get_id(message: Message, state: FSMContext):
 
     await state.update_data(END=ids)
     m_id = (await message.answer(txt.LPSB.REGISTRATION.ID, reply_markup=builder.as_markup())).message_id
-    exelink.sublist(
+    await memory.rewrite_sublist(
         mode='add',
         name='ccc/lpsb',
         key=message.chat.id,
-        data=m_id,
-        userID=message.from_user.id
+        data=m_id
     )
     await state.set_state(RegistrationFSM.END)
 
@@ -235,7 +232,7 @@ async def get_id(message: Message, state: FSMContext):
 @rtr.callback_query(mF.data.find('_cb_id') != -1, RegistrationFSM.END)
 async def end_reg(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         data = await state.get_data()
         chosen = callback.data.replace('_cb_id', '')
 
@@ -268,43 +265,38 @@ async def end_reg(callback: CallbackQuery, state: FSMContext):
                 None        # fileID_lpsb
             ]
         )
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='store_form_link',
-            key=data["CODE"],
-            userID=callback.from_user.id
+            key=data["CODE"]
         )
         firewall3.add_white(callback.from_user.id, "added via automatic register code")
 
-        if data["LOGO"]:  # data["LOGO"] - fileID_lpsb
-            exelink.photo(
-                bot="LPSB",
-                fileID=data["LOGO"],
-                path=cfg.PATHS.STORES_LOGOS + f"{chosen}.jpg",
-                userID=callback.from_user.id
+        if data["LOGO"]:
+            await callback.bot.download(
+                data["LOGO"],
+                cfg.PATHS.STORES_LOGOS + f"{chosen}.jpg"
             )
             db.update("logotypes", "storeID", chosen, "fileID_lpsb", data["LOGO"])
 
         await callback.message.edit_text(txt.LPSB.REGISTRATION.END.format(id=chosen))
         await callback.answer()
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='remove',
             name='ccc/lpsb',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
+            key=callback.message.chat.id
         )
-        exelink.warn(
+        await messenger.warn(
             text=txt.EXE.EVENTS.NEW_LPSB_REGISTRATION.format(
                 id=chosen,
                 host=data["EMAIL"],
                 host_id=callback.from_user.id
-            ),
-            userID=callback.from_user.id
+            )
         )
         tracker.log(
             command=("REGISTRATION", F.YELLOW + S.BRIGHT),
             status=("ID_PROCEED", F.GREEN + S.DIM),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
         await state.clear()
     except Exception as e:

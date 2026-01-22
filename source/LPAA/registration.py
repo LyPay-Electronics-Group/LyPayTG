@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, firewall3, tracker, exelink, lpsql
+from scripts import firewall3, tracker, lpsql, memory, parser, mailer
 from scripts.j2 import fromfile as j_fromfile
 from data import txt, config as cfg
 
@@ -24,7 +24,7 @@ print("LPAA/registration router")
 @rtr.message(Command("register_email"), mF.chat.id == cfg.HIGH_GROUP)
 async def start_reg(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         cmd = message.text.split()
         if len(cmd) > 1:
             await do_proceeding(cmd[1], message, state)
@@ -34,7 +34,7 @@ async def start_reg(message: Message, state: FSMContext):
             tracker.log(
                 command=("STORE_REGISTER", F.YELLOW),
                 status=("START", F.YELLOW),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -49,14 +49,14 @@ async def do_proceeding(text: str, message: Message, state: FSMContext):
         tracker.log(
             command=("STORE_REGISTER", F.YELLOW),
             status=("EMAIL_NOT_FOUND", F.RED),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
-    elif text in (await f.read_sublist("store_form_link")).keys():
+    elif text in (await memory.read_sublist("store_form_link")).keys():
         await message.answer(txt.LPAA.STORE_REGISTER.RECORD_EXIST)
         tracker.log(
             command=("STORE_REGISTER", F.YELLOW),
             status=("EXISTING_RECORD", F.RED + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     elif text in db.searchall("stores", "hostEmail"):
         await message.answer(txt.LPAA.STORE_REGISTER.STORE_EXIST.format(
@@ -65,15 +65,15 @@ async def do_proceeding(text: str, message: Message, state: FSMContext):
         tracker.log(
             command=("STORE_REGISTER", F.YELLOW),
             status=("EXISTING_STORE", F.RED + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     else:
         shuffle = list('0123456789abcdef')
         code = "".join([shuffle[randint(0, 15)] for _ in range(32)])
 
-        exelink.email(
+        await mailer.send_async(
             path=cfg.PATHS.EMAIL + "store.html",
-            participantEmail=text,
+            participant=text,
             theme="LyPay: приглашение на Благотворительную Ярмарку-2025",
             keys={
                 "VERSION": cfg.VERSION,
@@ -81,21 +81,19 @@ async def do_proceeding(text: str, message: Message, state: FSMContext):
                 "NAME": f' ({cfg.NAME})' if cfg.NAME != '' else '',
                 "CODE": code
             },
-            files=[cfg.PATHS.EMAIL + "LyPay Store's Manual.pdf"],
-            userID=message.from_user.id
+            files=[cfg.PATHS.EMAIL + "LyPay Store's Manual.pdf"]
         )
-        exelink.sublist(
+        await memory.rewrite_sublist(
             mode='add',
             name='store_form_link',
             key=code,
-            data=text,
-            userID=message.from_user.id
+            data=text
         )
         await message.answer(txt.LPAA.STORE_REGISTER.END.format(code=code))
         tracker.log(
             command=("STORE_REGISTER", F.YELLOW),
             status=("OK", F.GREEN),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
         await state.clear()
 
@@ -103,7 +101,7 @@ async def do_proceeding(text: str, message: Message, state: FSMContext):
 @rtr.message(mF.text, StoreRegisterFSM.EMAIL)
 async def proceed_email(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         text = message.text
         await do_proceeding(text, message, state)
     except Exception as e:

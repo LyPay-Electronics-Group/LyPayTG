@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, firewall3, tracker, lpsql
+from scripts import memory, firewall3, tracker, lpsql
 from scripts.unix import raw as raw_unix
 from data import txt
 
@@ -24,7 +24,7 @@ async def test(message: Message, state: FSMContext):
         if firewall_status == firewall3.WHITE_ANCHOR:
             tracker.log(
                 command=("TEST_4", F.GREEN + S.BRIGHT),
-                from_user=f.collect_FU(message)
+                from_user=f.get_user_data(message)
             )
 
             try:
@@ -39,10 +39,10 @@ async def test(message: Message, state: FSMContext):
             db.insert("arttest_test4", [str(randint(0, 1000000000)) + str(raw_unix()), message.from_user.id])
 
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(f.get_user_data(message))
             await message.answer(txt.MAIN.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(f.get_user_data(message))
             await message.answer(txt.MAIN.CMD.NOT_IN_WHITELIST)
     except Exception as e:
         tracker.error(
@@ -61,7 +61,7 @@ async def test_end(message: Message, state: FSMContext):
                 answer = data["TEST4"]
                 tracker.log(
                     command=("TEST_4_END", F.CYAN + S.BRIGHT),
-                    from_user=f.collect_FU(message)
+                    from_user=memory.get_user_data(message)
                 )
 
                 await message.answer(str(answer * 5))
@@ -71,10 +71,10 @@ async def test_end(message: Message, state: FSMContext):
                 pass
 
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(f.get_user_data(message))
             await message.answer(txt.MAIN.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(f.get_user_data(message))
             await message.answer(txt.MAIN.CMD.NOT_IN_WHITELIST)
     except Exception as e:
         tracker.error(

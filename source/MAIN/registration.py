@@ -6,19 +6,19 @@ from aiogram.fsm.context import FSMContext
 from aiogram import F as mF
 
 from os import getenv
+from os.path import exists
 from dotenv import load_dotenv
 
 from aiohttp import ClientSession as aiohttp_ClientSession, TCPConnector
-from ssl import create_default_context as ssl_create_default_context, CERT_NONE as ssl_CERT_NONE
-from asyncio import sleep
-from os.path import exists
-from colorama import Fore as F
-from random import randint
+from ssl import create_default_context as ssl_create_default_context, CERT_NONE
 import jwt
 
-from scripts import f, tracker, exelink, lpsql
+from asyncio import sleep
+from colorama import Fore as F
+from random import randint
+
+from scripts import tracker, j2, lpsql, memory, parser, messenger, mailer
 from scripts.unix import unix
-from scripts.j2 import fromfile_async as j_fromfile_async, fromfile as j_fromfile
 from data import config as cfg, txt
 
 from source.MAIN._states import *
@@ -31,7 +31,7 @@ integration_bridge_host = getenv("LYPAY_INTEGRATION_BRIDGE_HOST")
 integration_bridge_jwt = getenv("LYPAY_INTEGRATION_BRIDGE_JWT")
 
 rtr = Router()
-config = [j_fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
+config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
 db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 print("MAIN/registration router")
 
@@ -52,7 +52,7 @@ def register_proceed(tg_id: int, name: str, group: str, email: str, tag: str | N
                      owner   # owner
                  ])
     if not exists(cfg.PATHS.QR + f"{tg_id}.png"):
-        exelink.add(f"qr {tg_id}", tg_id)
+        memory.qr(tg_id)
         db.insert("qr",
                   [
                          tg_id,  # userID
@@ -65,24 +65,19 @@ def register_proceed(tg_id: int, name: str, group: str, email: str, tag: str | N
 @rtr.callback_query(RegisterFSM.STATE0, mF.data == 'register_main_cb')
 async def main_route(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text(
             txt.MAIN.REGISTRATION.NEW + "\n" + txt.MAIN.REGISTRATION.NEW_MAIN,
             link_preview_options=LinkPreviewOptions(is_disabled=True)
         )
         await callback.answer()
-        exelink.sublist(
-            mode='remove',
-            name='ccc/main',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
-        )
+        await memory.rewrite_sublist(mode='remove', name='ccc/main', key=callback.message.chat.id)
         await state.set_state(RegisterFSM.EMAIL)
         await state.update_data(GUEST=False)
         tracker.log(
             command=("REGISTRATION", F.YELLOW),
             status=("MAIN_ROUTE", F.YELLOW),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -94,24 +89,19 @@ async def main_route(callback: CallbackQuery, state: FSMContext):
 @rtr.callback_query(RegisterFSM.STATE0, mF.data == 'register_guest_cb')
 async def guest_route(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text(
             txt.MAIN.REGISTRATION.NEW + "\n" + txt.MAIN.REGISTRATION.NEW_GUEST,
             link_preview_options=LinkPreviewOptions(is_disabled=True)
         )
         await callback.answer()
-        exelink.sublist(
-            mode='remove',
-            name='ccc/main',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
-        )
+        await memory.rewrite_sublist(mode='remove', name='ccc/main', key=callback.message.chat.id)
         await state.set_state(RegisterFSM.EMAIL)
         await state.update_data(GUEST=True)
         tracker.log(
             command=("REGISTRATION", F.MAGENTA),
             status=("GUEST_ROUTE", F.MAGENTA),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -123,27 +113,27 @@ async def guest_route(callback: CallbackQuery, state: FSMContext):
 @rtr.message(RegisterFSM.EMAIL, mF.text, mF.text != "/cancel")
 async def send_email(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         em = message.text.lower().strip()
         if em[-17:] != "@students.sch2.ru" and em[-8:] != "@sch2.ru":
             tracker.log(
                 command=("REGISTRATION_EMAIL", F.YELLOW),
                 status=("BAD_FORMAT", F.RED),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             await message.answer(txt.MAIN.REGISTRATION.EMAIL.BAD)
         elif em not in db.searchall("corporation", "email"):
             tracker.log(
                 command=("REGISTRATION_EMAIL", F.YELLOW),
                 status=("NOT_FOUND", F.RED),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             await message.answer(txt.MAIN.REGISTRATION.EMAIL.NOT_IN_DATABASE)
         else:
             tracker.log(
                 command=("REGISTRATION_EMAIL", F.YELLOW),
                 status=("SUCCESS", F.GREEN),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
             await state.set_state(RegisterFSM.CODE)
 
@@ -153,9 +143,9 @@ async def send_email(message: Message, state: FSMContext):
             await state.update_data(CODE=code)
 
             if (await state.get_data())["GUEST"]:
-                exelink.email(
+                await mailer.send_async(
                     path=cfg.PATHS.EMAIL + "guest.html",
-                    participantEmail=message.text,
+                    participant=message.text,
                     theme="Регистрация в LyPay: Гостевой доступ",
                     keys={
                         "VERSION": cfg.VERSION,
@@ -165,21 +155,19 @@ async def send_email(message: Message, state: FSMContext):
                         "UID": message.from_user.id,
                         "CID": message.chat.id,
                         "UX": unix()
-                    },
-                    userID=message.from_user.id
+                    }
                 )
             else:
-                exelink.email(
+                await mailer.send_async(
                     path=cfg.PATHS.EMAIL + "main.html",
-                    participantEmail=message.text,
+                    participant=message.text,
                     theme="Регистрация в LyPay",
                     keys={
                         "VERSION": cfg.VERSION,
                         "BUILD": cfg.BUILD,
                         "NAME": f' ({cfg.NAME})' if cfg.NAME != '' else '',
                         "CODE": code
-                    },
-                    userID=message.from_user.id
+                    }
                 )
             await message.answer(txt.MAIN.REGISTRATION.EMAIL.OK)
     except Exception as e:
@@ -192,7 +180,7 @@ async def send_email(message: Message, state: FSMContext):
 @rtr.message(RegisterFSM.CODE, mF.text, mF.text != "/cancel")
 async def check_email_code(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         data = await state.get_data()
         if message.text.lower().strip() == data["CODE"]:
             if data["GUEST"]:
@@ -215,7 +203,7 @@ async def check_email_code(message: Message, state: FSMContext):
             tracker.log(
                 command=("ACTIVATION_CODE", F.YELLOW),
                 status=("OK", F.GREEN),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
 
         else:
@@ -225,7 +213,7 @@ async def check_email_code(message: Message, state: FSMContext):
             tracker.log(
                 command=("ACTIVATION_CODE", F.YELLOW),
                 status=("WRONG", F.RED),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -237,9 +225,9 @@ async def check_email_code(message: Message, state: FSMContext):
 @rtr.message(RegisterFSM.GUEST_NAME_INPUT, mF.text, mF.text != "/cancel")
 async def enter_guest_name(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         censor = tracker.censor(
-            from_user=f.collect_FU(message),
+            from_user=parser.get_user_data(message),
             text=message.text
         )
         if not censor:
@@ -251,7 +239,7 @@ async def enter_guest_name(message: Message, state: FSMContext):
             tracker.log(
                 command=("ENTER_NAME", F.YELLOW),
                 status=("BAD_FORMAT", F.RED),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         else:
             register_proceed(
@@ -268,7 +256,7 @@ async def enter_guest_name(message: Message, state: FSMContext):
             tracker.log(
                 command=("ENTER_NAME", F.YELLOW),
                 status=("SUCCESS", F.GREEN),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -282,14 +270,9 @@ async def enter_guest_name(message: Message, state: FSMContext):
 @rtr.callback_query(RegisterFSM.STATE0, mF.data == 'register_linking_cb')
 async def link_route(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
-        if (await j_fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["main_can_register_via_linking"]:
-            exelink.sublist(
-                mode='remove',
-                name='ccc/main',
-                key=callback.message.chat.id,
-                userID=callback.from_user.id
-            )
+        memory.update_config(config, [txt, cfg, main_keyboard])
+        if (await j2.fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["main_can_register_via_linking"]:
+            await memory.rewrite_sublist(mode='remove', name='ccc/main', key=callback.message.chat.id)
 
             code = "".join([base36[randint(0, 35)] for _ in range(50)])
             await state.update_data(LINK_CODE=code)
@@ -309,7 +292,7 @@ async def link_route(callback: CallbackQuery, state: FSMContext):
             tracker.log(
                 command=("REGISTRATION", F.YELLOW),
                 status=("LINK_ROUTE", F.YELLOW),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
         else:
             await callback.answer()
@@ -317,7 +300,7 @@ async def link_route(callback: CallbackQuery, state: FSMContext):
             tracker.log(
                 command=("REGISTRATION", F.YELLOW),
                 status=("LINK_ROUTE", F.YELLOW),
-                from_user=f.collect_FU(callback)
+                from_user=parser.get_user_data(callback)
             )
     except Exception as e:
         tracker.error(
@@ -329,14 +312,14 @@ async def link_route(callback: CallbackQuery, state: FSMContext):
 @rtr.message(RegisterFSM.LINK, CommandStart(deep_link=True))
 async def check_link(message: Message, state: FSMContext, command: CommandObject):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await message.delete()
         token = command.args[6:]
         tries = 0
         jwt_code = None
         ssl_context = ssl_create_default_context()
         ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl_CERT_NONE
+        ssl_context.verify_mode = CERT_NONE
         while tries < 3:
             try:
                 async with aiohttp_ClientSession(connector=TCPConnector(ssl=ssl_context)) as session:
@@ -354,12 +337,9 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
             tracker.log(
                 command=("REGISTRATION", F.YELLOW),
                 status=("BAD_REQUEST", F.RED),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
-            exelink.warn(
-                text=txt.EXE.ALERTS.BRIDGE_BAD_REQUEST,
-                userID=message.from_user.id
-            )
+            await messenger.warn(text=txt.EXE.ALERTS.BRIDGE_BAD_REQUEST)
         else:
             data = await state.get_data()
             try:
@@ -380,7 +360,7 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
                     tracker.log(
                         command=("REGISTRATION", F.YELLOW),
                         status=("BAD_TOKEN_CHECK", F.RED),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     decoded_email = decoded_json["email"]
@@ -392,19 +372,13 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
                             reply_markup=main_keyboard.registerCMD,
                             link_preview_options=LinkPreviewOptions(is_disabled=True)
                         )).message_id
-                        exelink.sublist(
-                            mode='add',
-                            name='ccc/main',
-                            key=message.chat.id,
-                            data=m_id,
-                            userID=message.from_user.id
-                        )
+                        await memory.rewrite_sublist(mode='add', name='ccc/main', key=message.chat.id, data=m_id)
                         await state.clear()
                         await state.set_state(RegisterFSM.STATE0)
                         tracker.log(
                             command=("REGISTRATION", F.YELLOW),
                             status=("BAD_EMAIL_CHECK", F.RED),
-                            from_user=f.collect_FU(message)
+                            from_user=parser.get_user_data(message)
                         )
                     else:
                         decoded_class = 'сотрудник' if decoded_json["role"] in ("admin", "teacher") else \
@@ -422,18 +396,12 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
                             ),
                             reply_markup=main_keyboard.registerLinkCMD
                         )).message_id
-                        exelink.sublist(
-                            mode='add',
-                            name='ccc/main',
-                            key=message.chat.id,
-                            data=m_id,
-                            userID=message.from_user.id
-                        )
+                        await memory.rewrite_sublist(mode='add', name='ccc/main', key=message.chat.id, data=m_id)
                         await state.set_state(RegisterFSM.CONFIRM_LINKING)
                         tracker.log(
                             command=("REGISTRATION", F.YELLOW),
                             status=("CONFIRM_LINKED_DATA", F.GREEN),
-                            from_user=f.collect_FU(message)
+                            from_user=parser.get_user_data(message)
                         )
             except jwt.ExpiredSignatureError:
                 code = "".join([base36[randint(0, 35)] for _ in range(50)])
@@ -450,7 +418,7 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
                 tracker.log(
                     command=("REGISTRATION", F.YELLOW),
                     status=("TOKEN_EXPIRED", F.RED),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             except jwt.InvalidTokenError:
                 code = "".join([base36[randint(0, 35)] for _ in range(50)])
@@ -467,7 +435,7 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
                 tracker.log(
                     command=("REGISTRATION", F.YELLOW),
                     status=("INVALID_TOKEN", F.RED),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
     except Exception as e:
         tracker.error(
@@ -479,7 +447,7 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
 @rtr.callback_query(RegisterFSM.CONFIRM_LINKING, mF.data == "register_link_confirm_cb")
 async def link_confirm(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text(callback.message.text + "\n> 'Всё верно ✅'")
         await callback.answer()
 
@@ -504,16 +472,11 @@ async def link_confirm(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(txt.MAIN.REGISTRATION.ACTIVATION.OK,
                                       reply_markup=main_keyboard.update_keyboard(callback.from_user.id))
         await state.clear()
-        exelink.sublist(
-            mode='remove',
-            name='ccc/main',
-            key=callback.message.chat.id,
-            userID=callback.from_user.id
-        )
+        await memory.rewrite_sublist(mode='remove', name='ccc/main', key=callback.message.chat.id)
         tracker.log(
             command=("REGISTRATION", F.YELLOW),
             status=("LINKED_SUCCESSFULLY", F.GREEN),
-            from_user=f.collect_FU(callback)
+            from_user=parser.get_user_data(callback)
         )
     except Exception as e:
         tracker.error(
@@ -525,7 +488,7 @@ async def link_confirm(callback: CallbackQuery, state: FSMContext):
 @rtr.callback_query(RegisterFSM.CONFIRM_LINKING, mF.data == "register_link_back_cb")
 async def link_get_back(callback: CallbackQuery, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg, main_keyboard])
+        memory.update_config(config, [txt, cfg, main_keyboard])
         await callback.message.edit_text(callback.message.text + "\n> 'Назад ◀️'")
         await callback.answer()
 
@@ -534,13 +497,7 @@ async def link_get_back(callback: CallbackQuery, state: FSMContext):
             reply_markup=main_keyboard.registerCMD,
             link_preview_options=LinkPreviewOptions(is_disabled=True)
         )).message_id
-        exelink.sublist(
-            mode='add',
-            name='ccc/main',
-            key=callback.message.chat.id,
-            data=m_id,
-            userID=callback.from_user.id
-        )
+        await memory.rewrite_sublist(mode='add', name='ccc/main', key=callback.message.chat.id, data=m_id)
         await state.update_data(LINK_CODE=None)
         await state.set_state(RegisterFSM.STATE0)
     except Exception as e:

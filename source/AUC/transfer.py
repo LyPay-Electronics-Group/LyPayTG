@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, firewall3, tracker, lpsql
+from scripts import firewall3, tracker, lpsql, memory, parser
 from scripts.j2 import fromfile as j_fromfile
 from data import txt, config as cfg
 
@@ -24,7 +24,7 @@ print("AUC/transfer router")
 @rtr.message(Command("transfer"))
 async def transfer(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             await message.answer(txt.AUC.TRANSFER.START)
@@ -32,13 +32,13 @@ async def transfer(message: Message, state: FSMContext):
             tracker.log(
                 command=("TRANSFER", F.GREEN + S.NORMAL),
                 status=("START", F.GREEN + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
             await message.answer(txt.AUC.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.AUC.CMD.NOT_IN_WHITELIST)
             await message.answer_sticker(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS[
                                              randint(0, len(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS)-1)
@@ -53,7 +53,7 @@ async def transfer(message: Message, state: FSMContext):
 @rtr.message(TransferFSM.STORE, mF.text)
 async def transfer_get_store(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         text = message.text.lower()
         try:
             store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
@@ -63,14 +63,14 @@ async def transfer_get_store(message: Message, state: FSMContext):
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("NOT_FOUND", F.RED + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 elif text == store:
                     await message.answer(txt.AUC.TRANSFER.SELF)
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("SELF", F.RED + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     host = db.search("users", "ID", db.search("stores", "ID", text)["hostID"])
@@ -88,7 +88,7 @@ async def transfer_get_store(message: Message, state: FSMContext):
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("STORE", F.BLUE + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             except Exception as e:
                 print(e.args)
@@ -96,14 +96,14 @@ async def transfer_get_store(message: Message, state: FSMContext):
                 tracker.log(
                     command=("TRANSFER", F.RED + S.NORMAL),
                     status=("FAIL", F.RED + S.NORMAL),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         except:
             await message.answer(txt.AUC.CMD.FAILED)
             tracker.log(
                 command=("TRANSFER", F.RED + S.NORMAL),
                 status=("FAIL", F.RED + S.NORMAL),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -115,13 +115,13 @@ async def transfer_get_store(message: Message, state: FSMContext):
 @rtr.message(TransferFSM.CONFIRM1, Command("confirm"))
 async def transfer_confirm1(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await state.set_state(TransferFSM.INPUT)
         await message.answer(txt.AUC.TRANSFER.INPUT)
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
             status=("CONFIRM_1", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -133,7 +133,7 @@ async def transfer_confirm1(message: Message, state: FSMContext):
 @rtr.message(TransferFSM.INPUT, mF.text)
 async def transfer_get_amount(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         try:
             amount = int(message.text)
             if amount > 0:
@@ -148,28 +148,28 @@ async def transfer_get_amount(message: Message, state: FSMContext):
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("AMOUNT", F.GREEN + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
                 else:
                     await message.answer(txt.AUC.TRANSFER.NOT_ENOUGH)
                     tracker.log(
                         command=("TRANSFER", F.GREEN + S.NORMAL),
                         status=("NOT_ENOUGH_MONEY", F.RED + S.DIM),
-                        from_user=f.collect_FU(message)
+                        from_user=parser.get_user_data(message)
                     )
             else:
                 await message.answer(txt.AUC.TRANSFER.SUBZERO_INPUT_VALUE)
                 tracker.log(
                     command=("TRANSFER", F.GREEN + S.NORMAL),
                     status=("AMOUNT_SUBZERO", F.RED + S.DIM),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
         except ValueError:
             await message.answer(txt.AUC.TRANSFER.BAD_FORMAT)
             tracker.log(
                 command=("TRANSFER", F.GREEN + S.NORMAL),
                 status=("AMOUNT_BAD_FORMAT", F.RED + S.DIM),
-                from_user=f.collect_FU(message)
+                from_user=parser.get_user_data(message)
             )
     except Exception as e:
         tracker.error(
@@ -181,7 +181,7 @@ async def transfer_get_amount(message: Message, state: FSMContext):
 @rtr.message(TransferFSM.CONFIRM2, Command("confirm"))
 async def transfer_confirm2(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         data = await state.get_data()
         id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
 
@@ -213,7 +213,7 @@ async def transfer_confirm2(message: Message, state: FSMContext):
         tracker.log(
             command=("TRANSFER", F.GREEN + S.NORMAL),
             status=("SUCCESSFUL", F.YELLOW + S.DIM),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(

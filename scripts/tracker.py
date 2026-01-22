@@ -1,11 +1,13 @@
-from datetime import datetime
+from asyncio import get_running_loop, run_coroutine_threadsafe
 
+from datetime import datetime
 from colorama import Fore, Style, init as c_init
 from pyfiglet import figlet_format as media_text
+
 from traceback import format_exc
 from os import environ
 
-from scripts import exelink, lpsql
+from scripts import lpsql, messenger
 from scripts.unix import unix
 from data.config import PATHS, NAME, VERSION
 from data.txt import LPAA as t_LPAA, EXE as t_EXE
@@ -99,9 +101,9 @@ def black(from_user: tuple[int, str | None]) -> None:
         command=("IN_BLACKLIST", Fore.RED + Style.BRIGHT),
         from_user=from_user
     )
-    exelink.warn(
-        text=t_EXE.WHITELIST.BLACK.format(id=from_user[0], tag='@' + from_user[1] if from_user[1] else '–'),
-        userID=from_user[0]
+    run_coroutine_threadsafe(
+        messenger.warn(text=t_EXE.WHITELIST.BLACK.format(id=from_user[0], tag='@' + from_user[1] if from_user[1] else '–')),
+        get_running_loop()
     )
 
 
@@ -110,9 +112,9 @@ def gray(from_user: tuple[int, str | None]) -> None:
         command=("NOT_IN_WHITELIST", Fore.RED + Style.BRIGHT),
         from_user=from_user
     )
-    exelink.warn(
-        text=t_EXE.WHITELIST.GRAY.format(id=from_user[0], tag='@' + from_user[1] if from_user[1] else '–'),
-        userID=from_user[0]
+    run_coroutine_threadsafe(
+        messenger.warn(text=t_EXE.WHITELIST.GRAY.format(id=from_user[0], tag='@' + from_user[1] if from_user[1] else '–')),
+        get_running_loop()
     )
 
 
@@ -144,24 +146,25 @@ def censor(*, from_user: tuple[int, str | None], text: str, text_length_flag: bo
             break
 
     if black_warn:
-        exelink.warn(
-            text=t_LPAA.SPAM_B.format(
+        run_coroutine_threadsafe(
+            messenger.warn(text=t_LPAA.SPAM_B.format(
                 user=from_user[0],
                 bot=BOT,
                 message=text.replace('<', '‹').replace('>', '›')
-            ),
-            userID=from_user[0]
+            )),
+            get_running_loop()
         )
         return False
     if gray_warn:
-        exelink.warn(
-            text=t_LPAA.SPAM.format(
+        run_coroutine_threadsafe(
+            messenger.warn(text=t_LPAA.SPAM.format(
                 user=from_user[0],
                 bot=BOT,
                 message=text
-            ),
-            userID=from_user[0]
+            )),
+            get_running_loop()
         )
+
     return True
 
 
@@ -194,10 +197,12 @@ def error(*, e: Exception, userID: int) -> None:
             newlines += 1
         crop_trace = full_trace[i] + crop_trace
 
-    exelink.error_traceback(
-        err=f"#{error_timestamp}\n\nlast trace call: <code>{crop_trace}</code>\nuser id: <code>{userID}</code>",
-        userID=userID,
-        error_log=log_path
+    run_coroutine_threadsafe(
+        messenger.error_traceback(
+            error_text=f"#{error_timestamp}\n\nlast trace call: <code>{crop_trace}</code>\nuser id: <code>{userID}</code>",
+            error_log=log_path
+        ),
+        get_running_loop()
     )
 
     parsed_traceback_anchor = full_trace.rfind("Traceback:")

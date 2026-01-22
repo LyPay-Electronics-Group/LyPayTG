@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from colorama import Fore as F, Style as S
 from random import randint
 
-from scripts import f, j2, tracker, firewall3, lpsql, exelink
+from scripts import j2, tracker, firewall3, lpsql, memory, parser
 from data import config as cfg, txt
 
 from source.LPSB._states import *
@@ -22,7 +22,7 @@ print("LPSB/abstract router")
 @rtr.message(Command("start"))
 async def start(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         await message.answer(txt.LPSB.CMD.START)
         if message.from_user.id not in db.searchall("shopkeepers", "userID"):
             if (await j2.fromfile_async(cfg.PATHS.LAUNCH_SETTINGS))["lpsb_can_register"]:
@@ -34,7 +34,7 @@ async def start(message: Message, state: FSMContext):
             await message.answer(txt.LPSB.REGISTRATION.REGISTERED)
         tracker.log(
             command=("START", F.GREEN + S.BRIGHT),
-            from_user=f.collect_FU(message)
+            from_user=parser.get_user_data(message)
         )
     except Exception as e:
         tracker.error(
@@ -46,7 +46,7 @@ async def start(message: Message, state: FSMContext):
 @rtr.message(Command("cancel"))
 async def cancel(message: Message, state: FSMContext):
     try:
-        f.update_config(config, [txt, cfg])
+        memory.update_config(config, [txt, cfg])
         firewall_status = firewall3.check(message.from_user.id)
         if firewall_status == firewall3.WHITE_ANCHOR:
             now = await state.get_state()
@@ -55,30 +55,27 @@ async def cancel(message: Message, state: FSMContext):
                 tracker.log(
                     command=("CANCEL", F.RED + S.NORMAL),
                     status=("FORCE_REGISTRATION", F.MAGENTA + S.BRIGHT),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
             else:
                 tracker.log(
                     command=("CANCELLED", F.RED + S.BRIGHT),
-                    from_user=f.collect_FU(message)
+                    from_user=parser.get_user_data(message)
                 )
                 c = 0
-                for key, value in (await f.read_sublist('ccc/lpsb')).items():
+                for key, value in (await memory.read_sublist('ccc/lpsb')).items():
                     if key == str(message.chat.id):
                         c += 1
-                        exelink.ccc_remove_keyboard(
-                            bot='lpsb',
-                            chat_id=key,
-                            message_id=value,
+                        await message.bot.edit_message_text(
                             text="[CCC] Действие отменено.",
-                            userID=message.from_user.id
+                            chat_id=key,
+                            message_id=int(value)
                         )
-                        exelink.sublist(
+                        await memory.rewrite_sublist(
                             mode='remove',
                             name='ccc/lpsb',
                             key=key,
-                            data=value,
-                            userID=message.from_user.id
+                            data=value
                         )
                 if c == 0:
                     await message.answer(txt.LPSB.CMD.CANCELLED)
@@ -94,15 +91,14 @@ async def cancel(message: Message, state: FSMContext):
                 except lpsql.errors.EntryNotFound:
                     pass
         elif firewall_status == firewall3.BLACK_ANCHOR:
-            tracker.black(f.collect_FU(message))
+            tracker.black(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.IN_BLACKLIST)
         else:
-            tracker.gray(f.collect_FU(message))
+            tracker.gray(parser.get_user_data(message))
             await message.answer(txt.LPSB.CMD.NOT_IN_WHITELIST)
             await message.answer_sticker(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS[
                                              randint(0, len(cfg.MEDIA.NOT_IN_LPSB_WHITELIST_FROGS)-1)
                                          ])
-            # print(F.LIGHTBLACK_EX + S.DIM + str(message.from_user.id))
     except Exception as e:
         tracker.error(
             e=e,
