@@ -12,6 +12,7 @@ from os.path import exists
 
 from colorama import Fore as F, Style as S
 from datetime import datetime
+from html import unescape
 
 from scripts import j2, i, firewall3, tracker, lpsql, memory, parser, cheque_sender, messenger
 from scripts.unix import unix
@@ -75,14 +76,14 @@ async def store(message: Message, state: FSMContext):
 async def choose_store(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        text = message.text.lower().replace('а', 'a').replace('с', 'c').replace('е', 'e')
+        text = censored.lower().replace('а', 'a').replace('с', 'c').replace('е', 'e')
 
         current = db.search("stores", "ID", text)
 
@@ -166,7 +167,7 @@ async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, 
         for file in listdir(cfg.PATHS.STORES_KEYBOARDS + store_id):
             js = await j2.fromfile_async(cfg.PATHS.STORES_KEYBOARDS + store_id + '/' + file)
             keyboard.add(InlineKeyboardButton(
-                text=f"{parser.de_anchor(js["text"])}  |  {js["price"]} {cfg.VALUTA.SHORT}",
+                text=f"{unescape(parser.de_anchor(js["text"]))}  |  {js["price"]} {cfg.VALUTA.SHORT}",
                 callback_data=js["call"])
             )
             js.pop("call")
@@ -207,15 +208,15 @@ async def store_callback(callback: CallbackQuery, state: FSMContext):
 async def store_multiplier(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        if message.text.isnumeric():
-            multiplier = int(message.text)
+        if censored.isnumeric():
+            multiplier = int(censored)
             if multiplier == 0:
                 await message.answer(txt.MAIN.STORE.MULTIPLIER.PURCHASED_0)
                 tracker.log(

@@ -255,7 +255,7 @@ async def get_qr(message: Message):
         )
 
 
-# @rtr.message(Command("delete"))
+@rtr.message(Command("delete"))
 async def delete_acc(message: Message):
     try:
         try:

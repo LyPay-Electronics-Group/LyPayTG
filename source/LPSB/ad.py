@@ -93,21 +93,21 @@ async def ad(message: Message, state: FSMContext):
 async def proceed_text(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text,
             text_length_flag=False
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        if len(message.text) <= 250:
+        if len(censored) <= 250:
             await message.answer(txt.LPSB.AD.TEXT_APPROVED)
             if (await state.get_data())["AD_TEXT"] is not None:
                 await message.answer(txt.LPSB.AD.TEXT_REWRITE_WARNING)
-            await state.update_data(AD_TEXT=message.text)
+            await state.update_data(AD_TEXT=censored)
         else:
-            await message.answer(txt.LPSB.AD.TEXT_LENGTH_LIMIT.format(text_length=len(message.text)))
+            await message.answer(txt.LPSB.AD.TEXT_LENGTH_LIMIT.format(text_length=len(censored)))
         tracker.log(
             command=("AD", F.MAGENTA + S.BRIGHT),
             status=("TEXT_PROCEED", F.YELLOW + S.DIM),

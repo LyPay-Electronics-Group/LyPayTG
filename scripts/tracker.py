@@ -1,11 +1,14 @@
-from asyncio import get_running_loop, run_coroutine_threadsafe
+from asyncio import create_task as aio_create_task
 
 from datetime import datetime
 from colorama import Fore, Style, init as c_init
 from pyfiglet import figlet_format as media_text
+from html import escape
 
 from traceback import format_exc
-from os import environ
+from os import environ, getcwd
+from platform import system
+from sys import version_info as version
 
 from scripts import lpsql, messenger
 from scripts.unix import unix
@@ -16,6 +19,14 @@ c_init(autoreset=True)
 
 db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
 
+platform = system()
+if platform == "Windows":
+    py_bin = environ['LOCALAPPDATA'] + fr"\Programs\Python\Python{version.major}{version.minor}\Lib"
+elif platform == "Linux":
+    py_bin = getcwd() + f"/.venv/lib/python{version.major}.{version.minor}"
+else:
+    py_bin = '%%%'
+
 BOT = ''
 LENGTH = 36
 
@@ -23,6 +34,7 @@ LENGTH = 36
 def startup(bot: str, *updates: str) -> None:
     """
     Печатает в консоль приветствие
+
     :param bot: main | lpaa | lpsb | auc
     """
     bot = bot.upper()
@@ -46,6 +58,7 @@ def startup(bot: str, *updates: str) -> None:
 def log(*, command: tuple[str, str], status: tuple[str, str] = None, from_user: tuple[int, str | None]) -> None:
     """
     Простой лог
+
     :param command: первая часть, текст / цвет
     :param status: вторая часть, текст / цвет
     :param from_user: (userID, tag)
@@ -101,9 +114,8 @@ def black(from_user: tuple[int, str | None]) -> None:
         command=("IN_BLACKLIST", Fore.RED + Style.BRIGHT),
         from_user=from_user
     )
-    run_coroutine_threadsafe(
-        messenger.warn(text=t_EXE.WHITELIST.BLACK.format(id=from_user[0], tag='@' + from_user[1] if from_user[1] else '–')),
-        get_running_loop()
+    aio_create_task(
+        messenger.warn(text=t_EXE.WHITELIST.BLACK.format(id=from_user[0], tag='@' + from_user[1] if from_user[1] else '–'))
     )
 
 
@@ -112,23 +124,22 @@ def gray(from_user: tuple[int, str | None]) -> None:
         command=("NOT_IN_WHITELIST", Fore.RED + Style.BRIGHT),
         from_user=from_user
     )
-    run_coroutine_threadsafe(
+    aio_create_task(
         messenger.warn(text=t_EXE.WHITELIST.GRAY.format(id=from_user[0], tag='@' + from_user[1] if from_user[1] else '–')),
-        get_running_loop()
     )
 
 
-def censor(*, from_user: tuple[int, str | None], text: str, text_length_flag: bool = True) -> bool:
+def censor(*, from_user: tuple[int, str | None], text: str, text_length_flag: bool = True) -> str | None:
     """
-    Возвращает True, если сообщение прошло проверку. False -- в обратном случае.
-    :param from_user: FU data
-    :param text: текст для проверки
+    Возвращает текст, в котором безопасно заменены html-последовательности, если сообщение прошло проверку. None -- в обратном случае.
+
+    :param from_user: (telegram id, telegram tag)
+    :param text: текст для проверки и замены
     :param text_length_flag: флаг проверки длины текста. True -- если проверка длины необходима
-    :return: bool
+    :return: str | None
     """
     list_gray = ["https", "http"]
-    list_black = ["<b", "</b", "<a", "</a", "<i", "</i", "<span", "</span", "<tg-spoiler", "</tg-spoiler", "<code",
-                  "</code", "<s", "</s", "<u", "</u", "<blockquote", "</blockquote"]
+    list_black = []
     gray_warn = False
     black_warn = False
 
@@ -146,26 +157,24 @@ def censor(*, from_user: tuple[int, str | None], text: str, text_length_flag: bo
             break
 
     if black_warn:
-        run_coroutine_threadsafe(
+        aio_create_task(
             messenger.warn(text=t_LPAA.SPAM_B.format(
                 user=from_user[0],
                 bot=BOT,
                 message=text.replace('<', '‹').replace('>', '›')
-            )),
-            get_running_loop()
+            ))
         )
-        return False
+        return None
     if gray_warn:
-        run_coroutine_threadsafe(
+        aio_create_task(
             messenger.warn(text=t_LPAA.SPAM.format(
                 user=from_user[0],
                 bot=BOT,
                 message=text
-            )),
-            get_running_loop()
+            ))
         )
 
-    return True
+    return escape(text)
 
 
 def check(from_user: tuple[int, str | None]) -> bool | None:
@@ -188,44 +197,33 @@ def error(*, e: Exception, userID: int) -> None:
     with open(log_path, 'w', encoding='utf8') as tmp_f:
         tmp_f.write(full_trace)
 
-    crop_trace = ''
-    newlines = 0
-    for i in range(len(full_trace)-1, -1, -1):
-        if newlines > 3:
-            break
-        if full_trace[i] == '\n':
-            newlines += 1
-        crop_trace = full_trace[i] + crop_trace
+    crop_trace = full_trace[full_trace.rfind("File \""):]
 
-    run_coroutine_threadsafe(
+    crop_trace = crop_trace.strip()
+    aio_create_task(
         messenger.error_traceback(
-            error_text=f"#{error_timestamp}\n\nlast trace call: <code>{crop_trace}</code>\nuser id: <code>{userID}</code>",
+            error_text=f"#{error_timestamp}\n\nlast trace call:\n<code>{escape(crop_trace)}</code>\n\nuser id: <code>{userID}</code>",
             error_log=log_path
-        ),
-        get_running_loop()
+        )
     )
 
-    parsed_traceback_anchor = full_trace.rfind("Traceback:")
-    full_trace = full_trace[parsed_traceback_anchor:]
+    file_ = 5
+    trace = crop_trace[file_+1:]
+    file_str = trace[:trace.find(',')-1]
 
-    file_ = 42
-    full_trace = full_trace[file_+1:]
-    file_str = full_trace[:full_trace.find(',')-1]
+    line_ = len(file_str) + 8
+    trace = trace[line_:]
+    line_str = trace[:trace.find(',')]
 
-    line_ = full_trace.find(' ') + 6
-    full_trace = full_trace[line_:]
-    line_str = full_trace[:full_trace.find(',')]
-
-    in_ = full_trace.find(' ') + 4
-    full_trace = full_trace[in_:]
-    in_str = full_trace[:full_trace.find('\n')]
+    in_ = len(line_str) + 5
+    trace = trace[in_:]
+    in_str = trace[:trace.find('\n')]
 
     print()
     print("Error ", Fore.RED + f"#{error_timestamp}", ':', sep='')
     print(Fore.BLUE + "TIME:", Fore.LIGHTBLACK_EX + datetime.fromtimestamp(unix_timestamp).strftime('%X'))
     print(Fore.GREEN + "NAME:", Fore.LIGHTBLACK_EX + get_full_class_error_name(e))
-    environ_anchor = environ['LOCALAPPDATA'] if 'LOCALAPPDATA' in environ.keys() else (environ['_'] if '_' in environ.keys() else '%%%')
-    print(Fore.YELLOW + "FILE:", Fore.LIGHTBLACK_EX + file_str.replace(fr'{environ_anchor}\Programs\Python\Python313\Lib', '%pyBIN%'))
+    print(Fore.YELLOW + "FILE:", Fore.LIGHTBLACK_EX + file_str.replace(py_bin, '%pyBIN%'))
     print(Fore.YELLOW + "LINE:", Fore.LIGHTBLACK_EX + line_str)
     print(Fore.YELLOW + "IN:  ", Fore.LIGHTBLACK_EX + in_str)
     print()

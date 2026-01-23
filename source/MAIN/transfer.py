@@ -263,15 +263,15 @@ async def transfer_confirm1(message: Message, state: FSMContext):
 async def transfer_get_amount(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
         try:
-            amount = int(message.text)
+            amount = int(censored)
             if amount > 0:
                 amount_ = db.balance_view(message.from_user.id)
                 to_ = db.search("users", "ID", (await state.get_data())["USER"])

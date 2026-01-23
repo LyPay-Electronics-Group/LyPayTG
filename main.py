@@ -52,7 +52,7 @@ async def ccc_on_startup():
                 chat_id=key,
                 message_id=int(value)
             )
-            await bot.send_message(int(key), "Последнее действие было сброшено.", reply_markup=update_keyboard(int(key)))
+            await bot.send_message(int(key), "Сервер был перезапущен, последнее действие было сброшено.", reply_markup=update_keyboard(int(key)))
             await sleep(0.015)
             await memory.rewrite_sublist(
                 mode='remove',

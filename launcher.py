@@ -6,7 +6,7 @@ from os.path import exists
 from platform import system as get_platform_name
 from dotenv import load_dotenv
 
-from asyncio import run as aio_run, run_coroutine_threadsafe, get_running_loop
+from asyncio import run as aio_run
 
 from time import time as unix
 from datetime import datetime
@@ -76,29 +76,15 @@ class Launcher:
         }
         self.settings_array = j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)
         if self.settings_array["launch"]:
-            coroutine = messenger.warn(text=txt_EXE.ALERTS.LAUNCH_EXIT_FAIL_DETECTED)
-            try:
-                run_coroutine_threadsafe(
-                    coroutine,
-                    get_running_loop()
-                )
-            except RuntimeError:
-                aio_run(coroutine)
+            aio_run(messenger.warn(text=txt_EXE.ALERTS.LAUNCH_EXIT_FAIL_DETECTED))
+            aio_run(messenger.message(
+                bot='LPAA',
+                text=' ',
+                file=cfg.MEDIA.SERVER_DOWN,
+                file_mode='sticker',
+                chatID=cfg.WARNING_GROUP
+            ))
 
-            coroutine = messenger.message(
-                    bot='LPAA',
-                    text=' ',
-                    file=cfg.MEDIA.SERVER_DOWN,
-                    file_mode='sticker',
-                    chatID=cfg.WARNING_GROUP
-                )
-            try:
-                run_coroutine_threadsafe(
-                    coroutine,
-                    get_running_loop()
-                )
-            except RuntimeError:
-                aio_run(coroutine)
         self.last_error, self.last_success = None, None
         self.platform = get_platform_name()
 
@@ -208,11 +194,11 @@ class Launcher:
         self.update_settings("launch_stamp", None)
 
     def update_settings(self, key: str, value: ...) -> int:
-        '''
+        """
         :param key: имя настройки для изменения
         :param value: новое значение
         :return: -1, если произошла ошибка. 0, если новое значение не совпадает по типу со старым. 1, если успешно заменено.
-        '''
+        """
         try:
             if type(value) is type(self.settings_array[key]) or value is None or self.settings_array[key] is None:
                 self.settings_array[key] = value
@@ -327,13 +313,6 @@ class Launcher:
             if args[0] == '-agent':
                 try:
                     print("WORK IS IN PROGRESS")
-                    '''with open(cfg.PATHS.STATISTICS + f"{args[1]}.agent", encoding='utf8') as f:
-                        read_ = f.readlines()
-                    print(F.CYAN + S.NORMAL + f"{read_[0]}", end='')
-                    sum_ = sum([int(line.split(': ')[1].replace('\n', '')) for line in read_[1:]])
-                    print(F.CYAN + S.NORMAL + f"- total: {sum_} {cfg.VALUTA.SHORT}")
-                    print(
-                        F.CYAN + S.NORMAL + f"- average: {round(sum_ / (unix() - float(read_[1].split(': ')[0])), 3)} {cfg.VALUTA.SHORT}")'''
                 except:
                     self.error_handle("statistics.agent", "FileNotFound", f"File '{args[1]}.agent' wasn't found!")
             elif args[0] == '-store':
@@ -534,10 +513,10 @@ class Launcher:
                 return False
 
             system(
-                f"./{
+                f"{
                 "startup.bat" if self.platform == "Windows" else
-                ("startup.sh" if self.platform == "Linux" else "")
-                } {setup} > NUL"
+                ("./startup.sh" if self.platform == "Linux" else "")
+                } {setup}"
             )
             if not silent:
                 self.success_handle("start.instance", f"Successfully started: {args[0]}")
@@ -826,9 +805,9 @@ class Launcher:
 
     def heartbeat(self):
         system(
-            f"./{
+            f"{
             "startup.bat" if self.platform == "Windows" else
-            ("startup.sh" if self.platform == "Linux" else "")
+            ("./startup.sh" if self.platform == "Linux" else "")
             } -beat source/SRV/plots.py"
         )
         self.success_handle("heartbeat.launch", "Successfully started measuring")

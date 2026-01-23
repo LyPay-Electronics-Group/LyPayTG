@@ -60,9 +60,7 @@ async def menu(message: Message, state: FSMContext):
                     key=message.chat.id,
                     data=m_id
                 )
-            elif current == MenuFSM.MENU:
-                await message.delete()
-            elif current in MenuFSM.__states__:
+            elif current == MenuFSM.MENU or current in MenuFSM.__states__:
                 c = 0
                 for key, value in (await memory.read_sublist('ccc/lpsb')).items():
                     if key == str(message.chat.id):

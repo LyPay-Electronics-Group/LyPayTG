@@ -7,6 +7,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from colorama import Fore as F, Style as S
 from os import listdir
 from os.path import exists
+from html import unescape
 
 from scripts import j2, tracker, lpsql, memory, parser
 from data import config as cfg, txt
@@ -88,7 +89,7 @@ async def proceed_store_keyboard(store_id: str) -> tuple[InlineKeyboardBuilder, 
         for file in listdir(cfg.PATHS.STORES_KEYBOARDS + store_id):
             js = await j2.fromfile_async(cfg.PATHS.STORES_KEYBOARDS + store_id + '/' + file)
             keyboard.add(InlineKeyboardButton(
-                text=f"{parser.de_anchor(js["text"])}  |  {js["price"]} {cfg.VALUTA.SHORT}",
+                text=f"{unescape(parser.de_anchor(js["text"]))}  |  {js["price"]} {cfg.VALUTA.SHORT}",
                 callback_data="none")
             )
             js.pop("call")

@@ -68,15 +68,15 @@ async def check_code(message: Message, state: FSMContext):
 async def save_name(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        if message.text.find('\n') == -1:
-            if len(message.text) > 100:
+        if censored.find('\n') == -1:
+            if len(censored) > 100:
                 await message.answer(txt.LPSB.SETTINGS.NAME_TOO_LONG)
                 tracker.log(
                     command=("REGISTRATION", F.YELLOW + S.BRIGHT),
@@ -84,7 +84,7 @@ async def save_name(message: Message, state: FSMContext):
                     from_user=parser.get_user_data(message)
                 )
             else:
-                await state.update_data(NAME=message.text)
+                await state.update_data(NAME=censored)
                 await message.answer(txt.LPSB.REGISTRATION.DESCRIPTION)
                 await state.set_state(RegistrationFSM.DESCRIPTION)
                 tracker.log(
@@ -110,14 +110,14 @@ async def save_name(message: Message, state: FSMContext):
 async def save_description(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        if len(message.text) > 900:
+        if len(censored) > 900:
             await message.answer(txt.LPSB.SETTINGS.DESCRIPTION_TOO_LONG)
             tracker.log(
                 command=("REGISTRATION", F.YELLOW + S.BRIGHT),
@@ -125,7 +125,7 @@ async def save_description(message: Message, state: FSMContext):
                 from_user=parser.get_user_data(message)
             )
         else:
-            await state.update_data(DESCRIPTION=message.text)
+            await state.update_data(DESCRIPTION=censored)
             m_id = (await message.answer(txt.LPSB.REGISTRATION.LOGO.SENT, reply_markup=main_keyboard.skipLogoCMD)).message_id
             await memory.rewrite_sublist(
                 mode='add',

@@ -115,15 +115,15 @@ async def access_add(callback: CallbackQuery, state: FSMContext):
 async def access_add_choose(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
         try:
-            user = int(message.text.strip())
+            user = int(censored.strip())
             store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
             users_store = db.search("shopkeepers", "userID", user)
             if users_store:
@@ -151,7 +151,7 @@ async def access_add_choose(message: Message, state: FSMContext):
                     group=user["class"],
                     tag='@' + user["tag"] if user["tag"] else '–'
                 ))
-                await state.update_data(PICK=message.text.strip())
+                await state.update_data(PICK=censored.strip())
                 await state.set_state(AccessFSM.ADD_CONFIRM)
                 tracker.log(
                     command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),
@@ -227,15 +227,15 @@ async def access_remove(callback: CallbackQuery, state: FSMContext):
 async def access_remove_choose(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
         try:
-            user = int(message.text.strip())
+            user = int(censored.strip())
             store = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
             if user == message.from_user.id:
                 await message.answer(txt.LPSB.ACCESS.SELF_REMOVE)
@@ -256,7 +256,7 @@ async def access_remove_choose(message: Message, state: FSMContext):
                             group=user["class"],
                             tag='@' + user["tag"] if user["tag"] else '–'
                         ))
-                        await state.update_data(PICK=message.text.strip())
+                        await state.update_data(PICK=censored.strip())
                         await state.set_state(AccessFSM.REMOVE_CONFIRM)
                         tracker.log(
                             command=("ACCESS", F.LIGHTCYAN_EX + S.BRIGHT),

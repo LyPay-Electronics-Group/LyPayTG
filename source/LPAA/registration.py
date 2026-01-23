@@ -71,18 +71,13 @@ async def do_proceeding(text: str, message: Message, state: FSMContext):
         shuffle = list('0123456789abcdef')
         code = "".join([shuffle[randint(0, 15)] for _ in range(32)])
 
-        await mailer.send_async(
-            path=cfg.PATHS.EMAIL + "store.html",
-            participant=text,
-            theme="LyPay: приглашение на Благотворительную Ярмарку-2025",
-            keys={
+        await mailer.send_async(path=cfg.PATHS.EMAIL + "store.html", participant=text,
+                                subject="LyPay: приглашение на Благотворительную Ярмарку-2025", keys={
                 "VERSION": cfg.VERSION,
                 "BUILD": cfg.BUILD,
                 "NAME": f' ({cfg.NAME})' if cfg.NAME != '' else '',
                 "CODE": code
-            },
-            files=[cfg.PATHS.EMAIL + "LyPay Store's Manual.pdf"]
-        )
+            }, files=[cfg.PATHS.EMAIL + "LyPay Store's Manual.pdf"])
         await memory.rewrite_sublist(
             mode='add',
             name='store_form_link',

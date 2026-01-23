@@ -186,14 +186,14 @@ async def stop_filling(message: Message, state: FSMContext):
 async def fill_item(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        split_ = message.text.split('/')
+        split_ = censored.split('/')
         parse = [(split_[k].strip() if k > len(split_) - 3 else split_[k]) for k in range(len(split_))]
 
         if len(parse) >= 2 and parse[-1].isnumeric():
@@ -481,11 +481,11 @@ async def actual_edit_item(callback: CallbackQuery, state: FSMContext):
 async def edit_item_data(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
         data = (await state.get_data())
@@ -493,7 +493,7 @@ async def edit_item_data(message: Message, state: FSMContext):
             id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
             try:
                 n = data["ITEMS_EDIT"]
-                split_ = message.text.split('/')
+                split_ = censored.split('/')
                 parse = [split_[k].strip() for k in range(len(split_)) if len(split_[k].strip()) > 0]
 
                 if len(parse) == 2 and parse[1].isnumeric():

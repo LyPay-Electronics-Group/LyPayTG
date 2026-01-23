@@ -73,15 +73,15 @@ async def settings_name(callback: CallbackQuery, state: FSMContext):
 async def settings_set_name(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        if message.text.find('\n') == -1:
-            if len(message.text) > 100:
+        if censored.find('\n') == -1:
+            if len(censored) > 100:
                 await message.answer(txt.LPSB.SETTINGS.NAME_TOO_LONG)
                 tracker.log(
                     command=("MENU", F.BLUE + S.BRIGHT),
@@ -91,21 +91,13 @@ async def settings_set_name(message: Message, state: FSMContext):
             else:
                 try:
                     id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
-                    db.update("stores", "ID", id_, "name", message.text.strip())
+                    db.update("stores", "ID", id_, "name", censored.strip())
                     store_host = db.search("stores", "ID", id_)["hostID"]
                     if message.from_user.id != store_host:
                         await message.bot.send_message(
                             text=txt.LPSB.SETTINGS.HOST_WARNING.NAME.format(id=message.from_user.id),
                             chat_id=store_host
                         )
-                        ''' до v2.2:
-                        exelink.message(
-                            text=txt.LPSB.SETTINGS.HOST_WARNING.NAME.format(id=message.from_user.id),
-                            bot='LPSB',
-                            participantID=store_host,
-                            userID=message.from_user.id
-                        )
-                        '''
 
                     await message.answer(txt.LPSB.SETTINGS.UPDATED)
                     tracker.log(
@@ -174,14 +166,14 @@ async def settings_description(callback: CallbackQuery, state: FSMContext):
 async def settings_set_description(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if censored is None:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        if len(message.text) > 900:
+        if len(censored) > 900:
             await message.answer(txt.LPSB.SETTINGS.DESCRIPTION_TOO_LONG)
             tracker.log(
                 command=("MENU", F.BLUE + S.BRIGHT),
@@ -191,7 +183,7 @@ async def settings_set_description(message: Message, state: FSMContext):
         else:
             try:
                 id_ = db.search("shopkeepers", "userID", message.from_user.id)["storeID"]
-                db.update("stores", "ID", id_, "description", message.text.strip())
+                db.update("stores", "ID", id_, "description", censored.strip())
                 store_host = db.search("stores", "ID", id_)["hostID"]
                 if message.from_user.id != store_host:
                     await message.bot.send_message(

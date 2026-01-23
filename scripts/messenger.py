@@ -74,17 +74,10 @@ async def message(*, bot: str, chatID: int, text: str,
             elif file_mode == 'sticker':
                 await bot_ref.send_sticker(chatID, file, reply_markup=update_keyboard(chatID))
             else:  # file_mode == 'file'
-                await bot_ref.send_document(chatID, FSInputFile(file), caption=message, reply_markup=update_keyboard(chatID))
+                await bot_ref.send_document(chatID, FSInputFile(file), caption=text, reply_markup=update_keyboard(chatID))
             ok = True
         except TelegramRetryAfter:
             await sleep(2.71828180 ** tries / 2)
-        except Exception as e:
-            print(chatID, e, e.args)
-            await warn(text=EXE.ALERTS.MESSAGE_SEND_FAIL.format(
-                bot=bot_ref.token,
-                id=chatID
-            ))
-            return
 
 
 async def warn(*, text: str):

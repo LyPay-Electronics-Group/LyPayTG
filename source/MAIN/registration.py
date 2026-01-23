@@ -143,11 +143,8 @@ async def send_email(message: Message, state: FSMContext):
             await state.update_data(CODE=code)
 
             if (await state.get_data())["GUEST"]:
-                await mailer.send_async(
-                    path=cfg.PATHS.EMAIL + "guest.html",
-                    participant=message.text,
-                    theme="Регистрация в LyPay: Гостевой доступ",
-                    keys={
+                await mailer.send_async(path=cfg.PATHS.EMAIL + "guest.html", participant=message.text,
+                                        subject="Регистрация в LyPay: Гостевой доступ", keys={
                         "VERSION": cfg.VERSION,
                         "BUILD": cfg.BUILD,
                         "NAME": f' ({cfg.NAME})' if cfg.NAME != '' else '',
@@ -155,20 +152,15 @@ async def send_email(message: Message, state: FSMContext):
                         "UID": message.from_user.id,
                         "CID": message.chat.id,
                         "UX": unix()
-                    }
-                )
+                    })
             else:
-                await mailer.send_async(
-                    path=cfg.PATHS.EMAIL + "main.html",
-                    participant=message.text,
-                    theme="Регистрация в LyPay",
-                    keys={
+                await mailer.send_async(path=cfg.PATHS.EMAIL + "main.html", participant=message.text,
+                                        subject="Регистрация в LyPay", keys={
                         "VERSION": cfg.VERSION,
                         "BUILD": cfg.BUILD,
                         "NAME": f' ({cfg.NAME})' if cfg.NAME != '' else '',
                         "CODE": code
-                    }
-                )
+                    })
             await message.answer(txt.MAIN.REGISTRATION.EMAIL.OK)
     except Exception as e:
         tracker.error(
@@ -226,14 +218,14 @@ async def check_email_code(message: Message, state: FSMContext):
 async def enter_guest_name(message: Message, state: FSMContext):
     try:
         memory.update_config(config, [txt, cfg, main_keyboard])
-        censor = tracker.censor(
+        censored = tracker.censor(
             from_user=parser.get_user_data(message),
             text=message.text
         )
-        if not censor:
+        if not censored:
             await message.answer(txt.MAIN.CMD.CENSOR_BLACK)
             return
-        name = ' '.join(map(lambda part: part.capitalize(), message.text.strip().split()))
+        name = ' '.join(map(lambda part: part.capitalize(), censored.strip().split()))
         if name.count(' ') == 0 or any(letter not in letters for letter in name.replace(' ', '').lower()):
             await message.answer(txt.MAIN.REGISTRATION.ACTIVATION.NAME_BAD_FORMAT)
             tracker.log(
