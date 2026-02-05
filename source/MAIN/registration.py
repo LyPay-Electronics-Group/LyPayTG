@@ -9,7 +9,7 @@ from os import getenv
 from os.path import exists
 from dotenv import load_dotenv
 
-from aiohttp import ClientSession as aiohttp_ClientSession, TCPConnector
+from aiohttp import ClientSession, TCPConnector
 from ssl import create_default_context as ssl_create_default_context, CERT_NONE
 import jwt
 
@@ -314,7 +314,7 @@ async def check_link(message: Message, state: FSMContext, command: CommandObject
         ssl_context.verify_mode = CERT_NONE
         while tries < 3:
             try:
-                async with aiohttp_ClientSession(connector=TCPConnector(ssl=ssl_context)) as session:
+                async with ClientSession(connector=TCPConnector(ssl=ssl_context)) as session:
                     async with session.get(f"{integration_bridge_host}/{token}") as response:
                         if response.status == 200:
                             jwt_code = (await response.text()).strip('"')

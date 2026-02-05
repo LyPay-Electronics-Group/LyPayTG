@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from colorama import Fore as F, Style as S
 from datetime import datetime
 
-from scripts import firewall3, tracker, j2, lpsql, memory, parser, messenger
+from scripts import firewall3, tracker, j2, lpsql, memory, parser
 from data import config as cfg, txt
 
 import source.MAIN._keyboards as main_keyboard
@@ -39,9 +39,8 @@ async def launch(message: Message, state: FSMContext):
                     reply_markup=main_keyboard.registerCMD,
                     link_preview_options=LinkPreviewOptions(is_disabled=True)
                 )).message_id
-                await (memory.rewrite_sublist(mode='add', name='ccc/main', key=message.chat.id, data=m_id))
-                await memory.rewrite_sublist(mode='add', name='hi_frog', key=message.from_user.id,
-                                        data=datetime.now().strftime('%Y'))
+                await memory.rewrite_sublist(mode='add', name='ccc/main', key=message.chat.id, data=m_id)
+                await memory.rewrite_sublist(mode='add', name='hi_frog', key=message.from_user.id, data=datetime.now().strftime('%Y'))
                 await state.set_state(RegisterFSM.STATE0)
             else:
                 read_sublist = await memory.read_sublist("hi_frog")
