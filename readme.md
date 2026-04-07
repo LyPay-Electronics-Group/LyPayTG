@@ -16,7 +16,7 @@
 ## Создатели и разработчики
 [`@GriB28`](https://github.com/GriB28),
 [`@GregorBag`](https://github.com/GregorBag),
-`[???]`
+[`@wiheg`](https://github.com/wiheg)
 
 [![Contributors](https://contrib.rocks/image?repo=LyPay-Electronics-Group%2FLyPayTG)](https://github.com/LyPay-Electronics-Group/LyPayTG/graphs/contributors)
 
