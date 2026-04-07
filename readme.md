@@ -1,7 +1,7 @@
 <div align="center" style="text-align: center;">
 
 # [LyPayTG](https://github.com/LyPay-Electronics-Group/LyPayTG)
-## [<img src="https://www.svgrepo.com/show/452115/telegram.svg" alt="tg" height=20 />`Telegram-боты`](https://core.telegram.org/bots) для [`Благотворительной Ярмарки`](https://t.me/fairL2SH) Лицея "Вторая школа"
+## [<img src="https://www.svgrepo.com/show/452115/telegram.svg" alt="tg" height=20 />`Telegram-боты`](https://core.telegram.org/bots) платформы онлайн банкинга LyPay<br>[`Благотворительной Ярмарки Лицея "Вторая школа"`](https://t.me/fairL2SH)
 
 <img src="https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue" alt="Python3">
 <img src="https://img.shields.io/badge/AIOgram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="AIOgram">
