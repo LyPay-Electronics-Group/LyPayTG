@@ -86,33 +86,15 @@ class NAMES:
 
 
 class PATHS:
-    DB = cwd() + '/database/'
     DATA = cwd() + '/data/'
 
-    QR = DB + 'QR/'
-    FIREWALL = DB + 'firewall/'
-
-    EXE = DATA + 'executor/'
     IMAGES = DATA + 'images/'
     LISTS = DATA + 'lists/'
     ccc_lists = LISTS + 'ccc/'
-    EMAIL = DATA + 'email/'
-
-    DB_BASE = DB + 'base.json'
-
-    FIREWALL_MAIN = FIREWALL + 'MAIN/'
-    FIREWALL_LPAA = FIREWALL + 'LPAA/'
-    FIREWALL_LPSB = FIREWALL + 'LPSB/'
-
-    STORES_KEYBOARDS = DATA + 'stores keyboards/'
-    STORES_LOGOS = DATA + 'stores logos/'
-    OLD_LOGOS = DATA + 'changed stores logos/'
-    STORES_CHEQUES = DATA + 'cheques/'
 
     LAUNCH_SETTINGS = DATA + 'settings.json'
 
-    all = (DB, DATA, EXE, IMAGES, LAUNCH_SETTINGS, QR, STORES_KEYBOARDS, STORES_LOGOS, STORES_CHEQUES,
-           OLD_LOGOS, FIREWALL, FIREWALL_MAIN, FIREWALL_LPAA, FIREWALL_LPSB, LISTS, ccc_lists, EMAIL)
+    all = (DATA, IMAGES, LAUNCH_SETTINGS, LISTS, ccc_lists)
 
 
 class MEDIA:
