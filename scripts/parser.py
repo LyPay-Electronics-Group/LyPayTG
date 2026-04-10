@@ -34,42 +34,6 @@ async def parse_media_cache_ad_packet(*, tech_message: str, sender_id: int | str
     await rewrite_sublist(name='ad_approving', key=str(m_id_2), data=str(sender_id))
 
 
-def anchor(__s__: str) -> str:
-    """
-    :param __s__: строка для якорного преобразования
-    :return: строка с якорями
-    """
-    return __s__.replace(
-        '\n', NEW_LINE_ANCHOR
-    ).replace(
-        '{', OPEN_CURLY_BRACKET_ANCHOR
-    ).replace(
-        '}', CLOSE_CURLY_BRACKET_ANCHOR
-    ).replace(
-        '"', QUOTATION_ANCHOR
-    ).replace(
-        ' ', SPACE_ANCHOR
-    )
-
-
-def de_anchor(__s__: str) -> str:
-    """
-    :param __s__: строка для обратного якорного преобразования
-    :return: строка без якорей
-    """
-    return __s__.replace(
-        NEW_LINE_ANCHOR, '\n'
-    ).replace(
-        OPEN_CURLY_BRACKET_ANCHOR, '{'
-    ).replace(
-        CLOSE_CURLY_BRACKET_ANCHOR, '}'
-    ).replace(
-        QUOTATION_ANCHOR, '"'
-    ).replace(
-        SPACE_ANCHOR, ' '
-    )
-
-
 def get_user_data(__object__: aio_message | aio_callback) -> tuple[int, str | None]:
     """
     Парсит telegram id и telegram username из объекта сообщения или коллбека

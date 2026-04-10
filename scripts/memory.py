@@ -59,16 +59,6 @@ async def rewrite_sublist(*, mode: str = 'add', name: str, key: str | int, data:
         f.write(j2.to_(js))
 
 
-def qr(value: int):
-    """
-    Создание QR-кода по введённому числовому значению.
-    QR будет сохранён в config.PATHS.QR с именем файла, равным `value`
-
-    :param value: число
-    """
-    make_qr(value).save(PATHS.QR + f"{value}.png", scale=5, border=5)
-
-
 def update_config(__old_config_version__: list[int], __library_links__: list[...]) -> bool:
     """
     Обновляет конфигурацию сборки, перезагружая библиотеки и файл конфига
