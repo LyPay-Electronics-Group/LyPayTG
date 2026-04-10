@@ -1,6 +1,8 @@
 /.idea/
 /.*env
 
+/LyPayAPI/
+
 /__pycache__/
 /*/__pycache__/
 
