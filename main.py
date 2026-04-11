@@ -15,14 +15,17 @@ from scripts import j2, tracker, memory
 from data import config as cfg
 
 from source.MAIN.abstract import rtr as abstract_r
-from source.MAIN.registration import rtr as registration_r
-from source.MAIN.transfer import rtr as transfer_r
-from source.MAIN.store import rtr as store_r
-from source.MAIN.coupon import rtr as coupon_r
-from source.MAIN.hidden_stuff import rtr as hidden_r
-from source.SRV.manual_media_id_1 import rtr as manual_media_id_r
+## from source.MAIN.registration import rtr as registration_r
+## from source.MAIN.transfer import rtr as transfer_r
+## from source.MAIN.store import rtr as store_r
+## from source.MAIN.coupon import rtr as coupon_r
+## from source.MAIN.hidden_stuff import rtr as hidden_r
+## from source.SRV.manual_media_id_1 import rtr as manual_media_id_r
+
+## -- двойной комментарий для тестов middleware, остальные роутеры не исправлены
 
 from source.MAIN._keyboards import update_keyboard
+from source.MAIN._middleware import MessageLogging
 
 
 col_init(autoreset=True)
@@ -32,14 +35,15 @@ load_dotenv()
 storage = MemoryStorage()
 disp = Dispatcher(storage=storage)
 disp.include_routers(
-    registration_r,  # ВСЕГДА выше, чем abstract
+    ## registration_r,  # ВСЕГДА выше, чем abstract
     abstract_r,
-    transfer_r,
-    store_r,
-    coupon_r,
-    hidden_r,
-    manual_media_id_r
+    ## transfer_r,
+    ## store_r,
+    ## coupon_r,
+    ## hidden_r,
+    ## manual_media_id_r
 )
+disp.message.middleware(MessageLogging())
 bot = Bot(getenv("LYPAY_MAIN_TOKEN"), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
@@ -70,7 +74,8 @@ async def ccc_on_startup():
 
 async def main():
     settings = j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)
-    if settings["launch"] and argv[1] == settings["launch_stamp"]:
+    ## if settings["launch"] and argv[1] == settings["launch_stamp"]:
+    if True:
         try:
             await bot.delete_webhook(drop_pending_updates=True)
             del_web = F.LIGHTBLACK_EX + S.BRIGHT + "- skipping webhooks... " + S.RESET_ALL + F.LIGHTGREEN_EX + "[OK]"
