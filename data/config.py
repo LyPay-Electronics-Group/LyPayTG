@@ -92,9 +92,11 @@ class PATHS:
     LISTS = DATA + 'lists/'
     ccc_lists = LISTS + 'ccc/'
 
+    TEMP = DATA + 'temp/'
+
     LAUNCH_SETTINGS = DATA + 'settings.json'
 
-    all = (DATA, IMAGES, LAUNCH_SETTINGS, LISTS, ccc_lists)
+    all = (DATA, IMAGES, LAUNCH_SETTINGS, LISTS, ccc_lists, TEMP)
 
 
 class MEDIA:

@@ -25,7 +25,7 @@ class DataBase:
         self.path = path.strip().lower().replace('\\', '/')
         if self.path[0] == '/':
             self.path = self.path[1:]
-        self.path = PATHS.DB + self.path
+        self.path = PATHS.DATA + self.path
 
         try:
             with open(self.path) as _:

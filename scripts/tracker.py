@@ -67,8 +67,8 @@ def log(*, command: tuple[str, str], status: tuple[str, str] = None, from_user: 
     print()
     length = LENGTH - len(command[0])
 
-    if check(from_user):
-        update(from_user)
+    ## if check(from_user):
+        ## update(from_user)
 
     if status is None:
         print(
@@ -192,7 +192,7 @@ def error(*, e: Exception, userID: int) -> None:
     unix_timestamp = unix()
     error_timestamp = f"error_{round(unix_timestamp * 100)}"
     full_trace = format_exc()
-    log_path = PATHS.EXE + f"{error_timestamp}.log"
+    log_path = PATHS.TEMP + f"{error_timestamp}.log"
 
     with open(log_path, 'w', encoding='utf8') as tmp_f:
         tmp_f.write(full_trace)
