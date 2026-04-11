@@ -1,8 +1,8 @@
-aiogram==3.22.0
-bokeh==3.7.3
+aiogram==3.27.0
+bokeh==3.9.0
 colorama==0.4.6
-psutil==7.0.0
+psutil==7.2.2
 pyfiglet==1.0.4
-PyJWT==2.10.1
-python-dotenv==1.1.1
+PyJWT==2.12.1
+python-dotenv==1.2.2
 segno==1.6.6
