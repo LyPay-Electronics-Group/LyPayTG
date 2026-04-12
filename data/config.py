@@ -2,7 +2,7 @@
 
 
 class VALUTA:
-    NAME = ['Тугрик', 'Тугрика', 'Тугрик', 'Тугрику', 'Тугриком', 'Тугрике', 'Тугрики', 'Тугриков']
+    NAME = ('Тугрик', 'Тугрика', 'Тугрик', 'Тугрику', 'Тугриком', 'Тугрике', 'Тугрики', 'Тугриков')
     COURSE = 1 / 1  # тугрик / рубль
     SHORT = 'Тгр.'
     MANUAL_REDACT_m = """
@@ -21,47 +21,47 @@ class VALUTA:
 
 
 class COMMANDS:
-    MAIN = [
+    MAIN = (
         ('/start',      'Старт'),
         ('/cancel',     'Отменить текущее действие'),
         ('/help',       'Руководство')
-    ]
-    LPAA = [
+    )
+    LPAA = (
         ('/cancel',     'Отменить текущее действие'),
         ('/deposit',    'Положить %s на счёт' % VALUTA.NAME[6])
-    ]
-    LPSB = [
+    )
+    LPSB = (
         ('/start',  'Старт'),
         ('/menu',   'Главное меню'),
         ('/cancel', 'Отменить текущее действие'),
         ('/access', 'Настройки доступа'),
         ('/ad',     'Опубликовать рекламу')
-    ]
-    AUC = [
+    )
+    AUC = (
         ('/start',      'Старт'),
         ('/balance',    'Баланс магазина'),
         ('/cancel',     'Отменить текущее действие'),
         ('/transfer',   'Перевести деньги другому магазину'),
         ('/access',     'Настройки доступа')
-    ]
+    )
 
 
 class NAMES:
-    MAIN = [
-        ("LyPay — Банк Ярмарки Л2Ш", 'ru'),
-        ("LyPay — L2Sh Fest Bank", None)
-    ]
-    LPSB = [
-        ("Продавцы Ярмарки", 'ru'),
-        ("Fest's Shopkeepers", None)
-    ]
-    AUC = [
-        ("Аукцион Ярмарки", 'ru'),
-        ("Fest's Auction", None)
-    ]
-    LPAA = [
-        ("LPAA — LyPay Admin Access", None)
-    ]
+    MAIN = (
+        ("LyPay – Банк Ярмарки Л2Ш", 'ru'),
+        ("LyPay – L2Sh Fest Bank", None)
+    )
+    LPSB = (
+        ("Продавцы Ярмарки Л2Ш", 'ru'),
+        ("L2Sh Fest's Shopkeepers", None)
+    )
+    AUC = (
+        ("Аукцион Ярмарки Л2Ш", 'ru'),
+        ("L2Sh Fest's Auction", None)
+    )
+    LPAA = (
+        ("LyPay Admin Access", None),
+    )
 
 
 class PATHS:
@@ -124,9 +124,3 @@ NAME = "API Update 1"
 BUILD = 87
 
 CONTACT_TAG = "@IGriB28I"
-
-NEW_LINE_ANCHOR = "[([*br*])]"
-OPEN_CURLY_BRACKET_ANCHOR = "[([*ocb*])]"
-CLOSE_CURLY_BRACKET_ANCHOR = "[([*ccb*])]"
-QUOTATION_ANCHOR = "[([*q*])]"
-SPACE_ANCHOR = "[([*s*])]"
