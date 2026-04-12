@@ -68,8 +68,11 @@ class PATHS:
     DATA = cwd() + '/data/'
 
     IMAGES = DATA + 'images/'
+
     LISTS = DATA + 'lists/'
     ccc_lists = LISTS + 'ccc/'
+
+    DATABASE = cwd() + '/database/'
 
     TEMP = DATA + 'temp/'
 
