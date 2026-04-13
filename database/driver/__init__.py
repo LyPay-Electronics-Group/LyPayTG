@@ -5,21 +5,15 @@ from data.config import PATHS
 
 
 class DataBase:
-    def __init__(self, path: str, tables: list[str]):
+    def __init__(self, path: str):
         """
         :param path: имя файла базы данных (в директории PATHS.DB)
-        :param tables: список имён таблиц в базе (можно выбрать один из списков в классе Tables)
         """
-
-        self.tables = tables
 
         self.path = path.strip().lower().replace('\\', '/')
         if self.path[0] == '/':
             self.path = self.path[1:]
         self.path = PATHS.DATA + self.path
-
-        with open(self.path) as _:
-            pass
 
     def search(self, table: str, column: str, mean: str | int, quantity: bool = False) -> dict[str, ...] | list[dict[str, ...]]:
         """
