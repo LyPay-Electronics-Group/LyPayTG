@@ -10,14 +10,15 @@ from os import environ, getcwd
 from platform import system
 from sys import version_info as version
 
-from scripts import lpsql, messenger
+from scripts import messenger
 from scripts.unix import unix
 from data.config import PATHS, NAME, VERSION
 from data.txt import LPAA as t_LPAA, EXE as t_EXE
+from database import driver
 
 c_init(autoreset=True)
 
-db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
+db = driver.DataBase("lypay_database.db")
 
 platform = system()
 if platform == "Windows":

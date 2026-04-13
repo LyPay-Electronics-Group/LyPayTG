@@ -1,6 +1,5 @@
 from aiogram.types import Message as aio_message, CallbackQuery as aio_callback, InputMediaPhoto, InputMediaVideo
 
-from data.config import QUOTATION_ANCHOR, NEW_LINE_ANCHOR, OPEN_CURLY_BRACKET_ANCHOR, CLOSE_CURLY_BRACKET_ANCHOR, SPACE_ANCHOR
 from source.references import LPSB
 from scripts.memory import rewrite_sublist
 

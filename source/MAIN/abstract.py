@@ -1,14 +1,15 @@
 from aiogram import Router
 from aiogram import F as mF
-from aiogram.types import Message, FSInputFile, LinkPreviewOptions
+from aiogram.types import Message, LinkPreviewOptions
 from aiogram.filters.command import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 
 from colorama import Fore as F, Style as S
 from datetime import datetime
 
-from scripts import tracker, j2, lpsql, memory, parser
+from scripts import tracker, j2, memory, parser
 from data import config as cfg, txt
+from database import driver
 
 import LyPayAPI as api
 
@@ -18,7 +19,7 @@ from source.MAIN._states import *
 
 rtr = Router()
 config = [j2.fromfile(cfg.PATHS.LAUNCH_SETTINGS)["config_v"]]
-db = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
+db = driver.DataBase("lypay_database.db")
 print("MAIN/abstract router")
 
 
@@ -211,13 +212,13 @@ async def balance(message: Message):
 
         if firewall_request == 'w':
             try:
-                balance_ = db.balance_view(message.from_user.id)
+                balance_ = await api.user.balance.view(1)
                 await message.answer(f"Ваш баланс: {balance_ if balance_ else 0} {cfg.VALUTA.SHORT}")
                 tracker.log(
                     command=("BALANCE", F.MAGENTA + S.DIM),
                     from_user=parser.get_user_data(message)
                 )
-            except lpsql.errors.IDNotFound:
+            except driver.exceptions.IDNotFound:
                 await message.answer(txt.MAIN.REGISTRATION.NOT_REGISTERED)
                 tracker.log(
                     command=("BALANCE", F.MAGENTA + S.DIM),
@@ -299,21 +300,6 @@ async def get_qr(message: Message):
         else:
             tracker.gray(parser.get_user_data(message))
             await message.answer(txt.MAIN.CMD.NOT_IN_WHITELIST)
-    except Exception as e:
-        tracker.error(
-            e=e,
-            userID=message.from_user.id
-        )
-
-
-@rtr.message(Command("delete"))
-async def delete_acc(message: Message):
-    try:
-        try:
-            db.delete_user(message.from_user.id)
-            await message.answer("Account deleted.")
-        except lpsql.errors.IDNotFound:
-            await message.answer("Account doesn't exist.")
     except Exception as e:
         tracker.error(
             e=e,

@@ -1,9 +1,10 @@
 ﻿from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton, ReplyKeyboardBuilder, KeyboardButton
-from scripts import lpsql
 from data.config import VALUTA
 
-keyboard_db_shortcut = lpsql.DataBase("lypay_database.db", lpsql.Tables.MAIN)
+from database import driver
+
+keyboard_db_shortcut = driver.DataBase("lypay_database.db")
 
 
 startCMDbuilder = InlineKeyboardBuilder([[
